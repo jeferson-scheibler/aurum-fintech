@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aurum Fintech — {{ acao }} Lançamento</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:      #C9A84C;
+      --gold-dim:  #7a6228;
+      --bg:        #0B0B0E;
+      --surface:   #111116;
+      --border:    #2a2820;
+      --text:      #E8E2D0;
+      --muted:     #6b6550;
+      --red:       #c97a7a;
+      --red-bg:    rgba(201,122,122,0.08);
+      --green:     #4caf7d;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); min-height: 100vh;
+      font-family: 'DM Mono', monospace; color: var(--text);
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px; opacity: 0.25;
+      pointer-events: none; z-index: 0;
+    }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(11,11,14,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 60px;
+    }
+    .nav-brand { display: flex; align-items: baseline; gap: 10px; }
+    .nav-symbol { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--gold); font-weight: 300; }
+    .nav-name   { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: 0.2em; text-transform: uppercase; }
+    .nav-user   { font-size: 11px; color: var(--muted); }
+    .nav-user span { color: var(--gold); }
+    .btn-logout {
+      font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); padding: 6px 14px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+    main {
+      position: relative; z-index: 1;
+      max-width: 600px; margin: 0 auto;
+      padding: 48px 24px 80px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .breadcrumb {
+      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 28px;
+    }
+    .breadcrumb a { color: var(--gold-dim); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--gold); }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif; font-size: 30px;
+      font-weight: 300; margin-bottom: 32px;
+    }
+
+    .form-card {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 36px 36px 32px; position: relative;
+    }
+    .form-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .erro {
+      background: var(--red-bg); border: 1px solid rgba(201,122,122,0.3);
+      color: var(--red); font-size: 11px; padding: 10px 14px;
+      margin-bottom: 24px; letter-spacing: 0.05em;
+    }
+
+    .form-row { margin-bottom: 22px; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+
+    label {
+      display: block; font-size: 10px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+      padding: 11px 13px; outline: none; transition: border-color 0.2s;
+      appearance: none; -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--gold-dim); }
+    select option { background: var(--surface); }
+
+    .form-actions { display: flex; gap: 12px; margin-top: 28px; }
+
+    .btn-submit {
+      flex: 1; padding: 12px; font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.25em; text-transform: uppercase; background: transparent;
+      border: 1px solid var(--gold); color: var(--gold); cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-submit:hover { background: var(--gold); color: var(--bg); }
+
+    .btn-voltar {
+      padding: 12px 20px; font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none;
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-voltar:hover { border-color: var(--muted); color: var(--text); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 500px) {
+      .form-row-2 { grid-template-columns: 1fr; }
+      .form-card  { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <span class="nav-symbol">₳</span>
+    <span class="nav-name">Aurum</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <span class="nav-user">Olá, <span>{{ usuario_nome }}</span></span>
+    <a href="/logout" class="btn-logout">Sair</a>
+  </div>
+</nav>
+
+<main>
+  <div class="breadcrumb">
+    <a href="/lancamentos">Lançamentos</a> &nbsp;/&nbsp; {{ acao }}
+  </div>
+
+  <h1>{{ acao }} Lançamento</h1>
+
+  <div class="form-card">
+    {% if erro %}
+    <div class="erro">{{ erro }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <div class="form-row">
+        <label for="descricao">Descrição *</label>
+        <input type="text" id="descricao" name="descricao" maxlength="255" required
+               value="{{ lancamento.descricao if lancamento else '' }}"
+               placeholder="Ex: Salário, Aluguel..."/>
+      </div>
+
+      <div class="form-row-2">
+        <div>
+          <label for="data_lancamento">Data *</label>
+          <input type="date" id="data_lancamento" name="data_lancamento" required
+                 value="{{ lancamento.data_lancamento.strftime('%Y-%m-%d') if lancamento else '' }}"/>
+        </div>
+        <div>
+          <label for="valor">Valor (R$) *</label>
+          <input type="number" id="valor" name="valor" step="0.01" min="0.01" required
+                 value="{{ '%.2f'|format(lancamento.valor) if lancamento else '' }}"
+                 placeholder="0.00"/>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div>
+          <label for="tipo_lancamento">Tipo *</label>
+          <select id="tipo_lancamento" name="tipo_lancamento" required>
+            <option value="">Selecione...</option>
+            <option value="receita" {% if lancamento and lancamento.tipo_lancamento == 'receita' %}selected{% endif %}>Receita</option>
+            <option value="despesa" {% if lancamento and lancamento.tipo_lancamento == 'despesa' %}selected{% endif %}>Despesa</option>
+          </select>
+        </div>
+        <div>
+          <label for="situacao">Situação</label>
+          <select id="situacao" name="situacao">
+            <option value="ativo"   {% if not lancamento or lancamento.situacao == 'ativo'   %}selected{% endif %}>Ativo</option>
+            <option value="inativo" {% if lancamento and lancamento.situacao == 'inativo' %}selected{% endif %}>Inativo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="/lancamentos" class="btn-voltar">Voltar</a>
+        <button type="submit" class="btn-submit">
+          {% if acao == 'Editar' %}Salvar Alterações{% else %}Criar Lançamento{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</main>
+
+</body>
+</html>
