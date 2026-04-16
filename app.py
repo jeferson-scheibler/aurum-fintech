@@ -12,7 +12,11 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Table, TableStyle, Paragraph, Spacer, Frame
+from reportlab.platypus import Table, TableStyle, Paragraph, Frame
+
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'aurum_secret_2026'
@@ -25,13 +29,10 @@ DB_CONFIG = {
     'port': 5432
 }
 
-EMAIL_CONFIG = {
-    'smtp_host': 'smtp.gmail.com',
-    'smtp_port': 587,
-    'usuario':   'jeferson.scheibler@universo.univates.br',
-    'senha':     'mkxnagompyogrlzx',
-    'destinatario': 'jeferson.scheibler@univates.br',
-}
+SMTP_HOST    = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT    = int(os.getenv('SMTP_PORT', 587))
+SMTP_USUARIO = os.getenv('SMTP_USUARIO', '')
+SMTP_SENHA   = os.getenv('SMTP_SENHA', '')
 
 
 def get_conn():
@@ -125,19 +126,22 @@ def _email_html(acao, campos):
 </html>"""
 
 
-def enviar_email(assunto, campos, acao):
+def enviar_email(assunto, campos, acao, email_destinatario):
+    if not SMTP_USUARIO or not SMTP_SENHA or not email_destinatario:
+        app.logger.warning('E-mail não configurado.')
+        return
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = assunto
-        msg['From']    = EMAIL_CONFIG['usuario']
-        msg['To']      = EMAIL_CONFIG['destinatario']
+        msg['From']    = SMTP_USUARIO
+        msg['To']      = email_destinatario
         msg.attach(MIMEText(_email_html(acao, campos), 'html', 'utf-8'))
 
-        with smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port']) as smtp:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
             smtp.ehlo()
             smtp.starttls()
-            smtp.login(EMAIL_CONFIG['usuario'], EMAIL_CONFIG['senha'])
-            smtp.sendmail(EMAIL_CONFIG['usuario'], EMAIL_CONFIG['destinatario'], msg.as_string())
+            smtp.login(SMTP_USUARIO, SMTP_SENHA)
+            smtp.sendmail(SMTP_USUARIO, email_destinatario, msg.as_string())
     except Exception as e:
         app.logger.warning(f'Falha ao enviar e-mail: {e}')
 
@@ -160,8 +164,9 @@ def login():
             usuario = cur.fetchone()
             cur.close(); conn.close()
             if usuario:
-                session['usuario_id']   = usuario['id']
-                session['usuario_nome'] = usuario['nome']
+                session['usuario_id']    = usuario['id']
+                session['usuario_nome']  = usuario['nome']
+                session['usuario_email'] = usuario['email'] or ''
                 return redirect(url_for('lancamentos'))
             erro = 'Login ou senha inválidos.'
         except Exception as e:
@@ -173,6 +178,35 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+# ── PERFIL ─────────────────────────────────────────────────────────────────────
+
+@app.route('/perfil', methods=['GET', 'POST'])
+@login_required
+def perfil():
+    erro = None
+    ok   = None
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        try:
+            conn = get_conn()
+            cur  = conn.cursor()
+            cur.execute(
+                "UPDATE usuario SET email = %s WHERE id = %s",
+                (email, session['usuario_id'])
+            )
+            conn.commit()
+            cur.close(); conn.close()
+            session['usuario_email'] = email
+            ok = 'E-mail atualizado com sucesso.'
+        except Exception as e:
+            erro = f'Erro ao salvar: {e}'
+
+    return render_template('perfil.html',
+                           usuario_nome=session.get('usuario_nome'),
+                           usuario_email=session.get('usuario_email', ''),
+                           erro=erro, ok=ok)
 
 
 # ── LISTAR ─────────────────────────────────────────────────────────────────────
@@ -259,7 +293,8 @@ def novo_lancamento():
                     assunto=f'[Aurum] Novo lançamento — {descricao}',
                     campos=dict(id=novo_id, descricao=descricao, data_lancamento=data_lancamento,
                                 valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao),
-                    acao='criado'
+                    acao='criado',
+                    email_destinatario=session.get('usuario_email', ''),
                 )
                 return redirect(url_for('lancamentos'))
             except Exception as e:
@@ -304,7 +339,8 @@ def editar_lancamento(id):
                     assunto=f'[Aurum] Lançamento atualizado — {descricao}',
                     campos=dict(id=id, descricao=descricao, data_lancamento=data_lancamento,
                                 valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao),
-                    acao='atualizado'
+                    acao='atualizado',
+                    email_destinatario=session.get('usuario_email', ''),
                 )
                 return redirect(url_for('lancamentos'))
             except Exception as e:
@@ -369,7 +405,6 @@ def exportar_pdf():
     total_despesas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'despesa')
     saldo          = total_receitas - total_despesas
 
-    # paleta
     GOLD    = colors.HexColor('#C9A84C')
     DARK    = colors.HexColor('#0B0B0E')
     SURFACE = colors.HexColor('#111116')
@@ -381,28 +416,23 @@ def exportar_pdf():
     BORDER  = colors.HexColor('#2a2820')
 
     PAGE_W, PAGE_H = A4
-    M = 15 * mm   # margem lateral
+    M = 15 * mm
 
     def fmt(v):
         return f'R$ {v:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    def draw_page(c, registros_pagina=None):
-        """Desenha fundo, header e rodapé. Retorna Y onde o conteúdo pode começar."""
+    def draw_page(c):
         c.saveState()
 
-        # fundo
         c.setFillColor(DARK)
         c.rect(0, 0, PAGE_W, PAGE_H, fill=1, stroke=0)
 
-        # faixa dourada topo
         stripe_h = 2.5
         thirds   = (PAGE_W - 2 * M) / 3
         for i, alpha in enumerate([0.2, 1.0, 0.2]):
-            r, g, b = GOLD.red, GOLD.green, GOLD.blue
-            c.setFillColorRGB(r, g, b, alpha)
+            c.setFillColorRGB(GOLD.red, GOLD.green, GOLD.blue, alpha)
             c.rect(M + i * thirds, PAGE_H - stripe_h, thirds, stripe_h, fill=1, stroke=0)
 
-        # símbolo + nome
         c.setFont('Helvetica-Bold', 22)
         c.setFillColor(GOLD)
         c.drawString(M, PAGE_H - 18 * mm, 'AURUM')
@@ -410,56 +440,43 @@ def exportar_pdf():
         c.setFont('Helvetica', 8)
         c.setFillColor(MUTED)
         c.drawString(M, PAGE_H - 23 * mm, 'GESTAO FINANCEIRA')
-
-        # data à direita
-        c.setFont('Helvetica', 8)
-        c.setFillColor(MUTED)
         c.drawRightString(PAGE_W - M, PAGE_H - 18 * mm,
                           f'Extrato de Lancamentos  .  {datetime.now().strftime("%d/%m/%Y")}')
 
-        # linha separadora abaixo do header
         sep_y = PAGE_H - 27 * mm
         c.setStrokeColor(BORDER)
         c.setLineWidth(0.5)
         c.line(M, sep_y, PAGE_W - M, sep_y)
 
-        # cards de resumo
-        card_y     = sep_y - 22 * mm
-        card_h     = 18 * mm
-        card_w     = (PAGE_W - 2 * M) / 3
-        card_data  = [
+        card_y    = sep_y - 22 * mm
+        card_h    = 18 * mm
+        card_w    = (PAGE_W - 2 * M) / 3
+        card_data = [
             ('TOTAL RECEITAS', fmt(total_receitas), GREEN),
             ('TOTAL DESPESAS', fmt(total_despesas), RED),
             ('SALDO',          fmt(saldo),          GOLD),
         ]
         for i, (label, valor, cor) in enumerate(card_data):
             cx = M + i * card_w
-            # fundo do card
             c.setFillColor(SURFACE)
             c.rect(cx, card_y, card_w, card_h, fill=1, stroke=0)
-            # borda entre cards
             if i > 0:
                 c.setStrokeColor(BORDER)
                 c.setLineWidth(0.4)
                 c.line(cx, card_y, cx, card_y + card_h)
-            # linha colorida no topo do card
             c.setFillColor(cor)
             c.rect(cx, card_y + card_h - 2, card_w, 2, fill=1, stroke=0)
-            # label
             c.setFont('Helvetica', 7)
             c.setFillColor(MUTED)
             c.drawString(cx + 8, card_y + card_h - 10, label)
-            # valor
             c.setFont('Helvetica-Bold', 13)
             c.setFillColor(cor)
             c.drawString(cx + 8, card_y + 5, valor)
 
-        # borda externa dos cards
         c.setStrokeColor(BORDER)
         c.setLineWidth(0.4)
         c.rect(M, card_y, PAGE_W - 2 * M, card_h, fill=0, stroke=1)
 
-        # rodapé
         footer_y = 10 * mm
         c.setStrokeColor(BORDER)
         c.setLineWidth(0.4)
@@ -467,23 +484,21 @@ def exportar_pdf():
         c.setFont('Helvetica', 7)
         c.setFillColor(MUTED)
         c.drawString(M, footer_y, 'AURUM FINTECH')
-        c.drawRightString(PAGE_W - M,  footer_y,
+        c.drawRightString(PAGE_W - M, footer_y,
                           f'Gerado em {datetime.now().strftime("%d/%m/%Y as %H:%M")}')
 
         c.restoreState()
-        # retorna Y onde a tabela começa (abaixo dos cards)
         return card_y - 6 * mm
 
-    # estilos de célula
     base   = getSampleStyleSheet()
     normal = base['Normal']
 
     def ps(name, **kw):
         return ParagraphStyle(name, parent=normal, **kw)
 
-    head_s  = ps('h',  fontSize=7,  textColor=GOLD,  fontName='Helvetica-Bold')
-    cell_s  = ps('c',  fontSize=8,  textColor=TEXT,  fontName='Helvetica')
-    cell_m  = ps('cm', fontSize=8,  textColor=MUTED, fontName='Helvetica')
+    head_s = ps('h',  fontSize=7, textColor=GOLD,  fontName='Helvetica-Bold')
+    cell_s = ps('c',  fontSize=8, textColor=TEXT,  fontName='Helvetica')
+    cell_m = ps('cm', fontSize=8, textColor=MUTED, fontName='Helvetica')
 
     def mkcell(text, style, cor=None):
         if cor:
@@ -493,25 +508,25 @@ def exportar_pdf():
     col_w = [10*mm, 67*mm, 24*mm, 20*mm, 34*mm, 18*mm]
 
     rows = [[
-        mkcell('#',          head_s),
-        mkcell('DESCRICAO',  head_s),
-        mkcell('DATA',       head_s),
-        mkcell('TIPO',       head_s),
-        mkcell('VALOR',      head_s),
-        mkcell('SITUACAO',   head_s),
+        mkcell('#',         head_s),
+        mkcell('DESCRICAO', head_s),
+        mkcell('DATA',      head_s),
+        mkcell('TIPO',      head_s),
+        mkcell('VALOR',     head_s),
+        mkcell('SITUACAO',  head_s),
     ]]
     for r in registros:
-        receita  = r['tipo_lancamento'] == 'receita'
-        cor_val  = '#4caf7d' if receita else '#c97a7a'
-        sinal    = '' if receita else '- '
+        receita = r['tipo_lancamento'] == 'receita'
+        cor_val = '#4caf7d' if receita else '#c97a7a'
+        sinal   = '' if receita else '- '
         rows.append([
             mkcell(str(r['id']),                              cell_m),
             mkcell(r['descricao'],                            cell_s),
             mkcell(r['data_lancamento'].strftime('%d/%m/%Y'), cell_m),
             mkcell('Receita' if receita else 'Despesa',       cell_s, cor_val),
             mkcell(f"{sinal}{fmt(r['valor'])}",               cell_s, cor_val),
-            mkcell('Ativo' if r['situacao']=='ativo' else 'Inativo', cell_m,
-                   None if r['situacao']=='ativo' else '#6b6550'),
+            mkcell('Ativo' if r['situacao'] == 'ativo' else 'Inativo', cell_m,
+                   None if r['situacao'] == 'ativo' else '#6b6550'),
         ])
 
     tabela = Table(rows, colWidths=col_w, repeatRows=1)
@@ -530,22 +545,16 @@ def exportar_pdf():
         ('BOX',           (0,0), (-1,-1), 0.4, BORDER),
     ]))
 
-    # --- renderização manual com canvas ---
-    from reportlab.platypus import Frame
-
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
 
     def render_all():
-        # primeira página
         table_top = draw_page(c)
-        frame_h   = table_top - 14 * mm   # altura disponível até o rodapé
+        frame_h   = table_top - 14 * mm
         frame     = Frame(M, 14 * mm, PAGE_W - 2 * M, frame_h,
                           leftPadding=0, rightPadding=0,
                           topPadding=0,  bottomPadding=0)
-
-        story = [tabela]
-        # deixa o Frame quebrar páginas sozinho
+        story     = [tabela]
         remaining = frame.addFromList(story, c)
 
         while remaining:

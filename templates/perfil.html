@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aurum Fintech — Perfil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:     #C9A84C; --gold-dim: #7a6228;
+      --bg:       #0B0B0E; --surface:  #111116;
+      --border:   #2a2820; --text:     #E8E2D0;
+      --muted:    #6b6550; --red:      #c97a7a;
+      --red-bg:   rgba(201,122,122,0.08);
+      --green:    #4caf7d; --green-bg: rgba(76,175,125,0.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); min-height: 100vh; font-family: 'DM Mono', monospace; color: var(--text); }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px; opacity: 0.25; pointer-events: none; z-index: 0;
+    }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(11,11,14,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 60px;
+    }
+    .nav-brand { display: flex; align-items: baseline; gap: 10px; }
+    .nav-symbol { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--gold); font-weight: 300; }
+    .nav-name   { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: 0.2em; text-transform: uppercase; }
+    .nav-right  { display: flex; align-items: center; gap: 20px; }
+    .nav-user   { font-size: 11px; color: var(--muted); }
+    .nav-user span { color: var(--gold); }
+    .btn-nav { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 6px 14px; transition: color .2s, border-color .2s; }
+    .btn-nav:hover { color: var(--red); border-color: var(--red); }
+
+    main { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; padding: 48px 24px 80px; animation: fadeUp .45s ease both; }
+
+    .breadcrumb { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+    .breadcrumb a { color: var(--gold-dim); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--gold); }
+
+    h1 { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; margin-bottom: 8px; }
+    .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 32px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 34px 34px 30px; position: relative;
+    }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .msg {
+      font-size: 11px; padding: 10px 14px; margin-bottom: 22px;
+      border: 1px solid; letter-spacing: 0.05em;
+    }
+    .msg.ok   { background: var(--green-bg); color: var(--green); border-color: rgba(76,175,125,.25); }
+    .msg.erro { background: var(--red-bg);   color: var(--red);   border-color: rgba(201,122,122,.25); }
+
+    .form-row { margin-bottom: 22px; }
+    label { display: block; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+      padding: 11px 13px; outline: none; transition: border-color .2s;
+    }
+    input:focus { border-color: var(--gold-dim); }
+
+    .hint { font-size: 10px; color: var(--muted); margin-top: 7px; line-height: 1.7; }
+
+    .form-actions { display: flex; gap: 12px; margin-top: 26px; }
+    .btn-submit {
+      flex: 1; padding: 12px; font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.25em; text-transform: uppercase; background: transparent;
+      border: 1px solid var(--gold); color: var(--gold); cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .btn-submit:hover { background: var(--gold); color: var(--bg); }
+    .btn-voltar {
+      padding: 12px 20px; font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none;
+      border: 1px solid var(--border); color: var(--muted);
+      transition: border-color .2s, color .2s;
+    }
+    .btn-voltar:hover { border-color: var(--muted); color: var(--text); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">
+    <span class="nav-symbol">₳</span>
+    <span class="nav-name">Aurum</span>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user">Olá, <span>{{ usuario_nome }}</span></span>
+    <a href="/lancamentos" class="btn-nav">Lançamentos</a>
+    <a href="/logout" class="btn-nav">Sair</a>
+  </div>
+</nav>
+
+<main>
+  <div class="breadcrumb"><a href="/lancamentos">Lançamentos</a> &nbsp;/&nbsp; Perfil</div>
+  <h1>Perfil</h1>
+  <p class="subtitle">E-mail para receber notificações de lançamentos</p>
+
+  <div class="card">
+    {% if ok   %}<div class="msg ok">{{ ok }}</div>{% endif %}
+    {% if erro %}<div class="msg erro">{{ erro }}</div>{% endif %}
+
+    <form method="POST">
+      <div class="form-row">
+        <label for="email">E-mail de destino</label>
+        <input type="email" id="email" name="email" required
+               value="{{ usuario_email }}"
+               placeholder="seuemail@gmail.com"/>
+        <p class="hint">
+          As notificações de criação e edição de lançamentos serão enviadas para este endereço.
+        </p>
+      </div>
+
+      <div class="form-actions">
+        <a href="/lancamentos" class="btn-voltar">Voltar</a>
+        <button type="submit" class="btn-submit">Salvar</button>
+      </div>
+    </form>
+  </div>
+</main>
+</body>
+</html>
