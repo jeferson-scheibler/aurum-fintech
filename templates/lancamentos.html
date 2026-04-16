@@ -7,43 +7,37 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --gold:       #C9A84C;
-      --gold-light: #E8C97A;
-      --gold-dim:   #7a6228;
-      --bg:         #0B0B0E;
-      --surface:    #111116;
-      --surface2:   #16161c;
-      --border:     #2a2820;
-      --text:       #E8E2D0;
-      --muted:      #6b6550;
-      --green:      #4caf7d;
-      --green-bg:   rgba(76,175,125,0.08);
-      --red:        #c97a7a;
-      --red-bg:     rgba(201,122,122,0.08);
+      --gold:      #C9A84C;
+      --gold-dim:  #7a6228;
+      --bg:        #0B0B0E;
+      --surface:   #111116;
+      --surface2:  #16161c;
+      --border:    #2a2820;
+      --text:      #E8E2D0;
+      --muted:     #6b6550;
+      --green:     #4caf7d;
+      --green-bg:  rgba(76,175,125,0.08);
+      --red:       #c97a7a;
+      --red-bg:    rgba(201,122,122,0.08);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      background: var(--bg);
-      min-height: 100vh;
-      font-family: 'DM Mono', monospace;
-      color: var(--text);
+      background: var(--bg); min-height: 100vh;
+      font-family: 'DM Mono', monospace; color: var(--text);
     }
     body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
+      content: ''; position: fixed; inset: 0;
       background-image:
         linear-gradient(var(--border) 1px, transparent 1px),
         linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.25;
-      pointer-events: none;
-      z-index: 0;
+      background-size: 60px 60px; opacity: 0.25;
+      pointer-events: none; z-index: 0;
     }
+
     nav {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(11,11,14,0.92);
-      backdrop-filter: blur(12px);
+      background: rgba(11,11,14,0.92); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 40px; height: 60px;
@@ -52,13 +46,13 @@
     .nav-symbol { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--gold); font-weight: 300; }
     .nav-name   { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: 0.2em; text-transform: uppercase; }
     .nav-right  { display: flex; align-items: center; gap: 20px; }
-    .nav-user   { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; }
+    .nav-user   { font-size: 11px; color: var(--muted); }
     .nav-user span { color: var(--gold); }
     .btn-logout {
-      font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em;
-      text-transform: uppercase; color: var(--muted); text-decoration: none;
+      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
       border: 1px solid var(--border); padding: 6px 14px;
-      transition: color 0.2s, border-color 0.2s;
+      transition: color .2s, border-color .2s;
     }
     .btn-logout:hover { color: var(--red); border-color: var(--red); }
 
@@ -68,58 +62,123 @@
       padding: 40px 24px 60px;
     }
 
-    /* flash */
+    /* ── flash ── */
+    .flash-wrap { position: relative; margin-bottom: 20px; }
     .flash {
-      font-size: 11px; letter-spacing: 0.1em;
-      padding: 10px 16px; margin-bottom: 24px;
-      border: 1px solid;
-      animation: fadeUp 0.4s ease both;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; letter-spacing: 0.08em;
+      padding: 10px 14px; border: 1px solid;
+      animation: slideDown .35s ease both;
+      transition: opacity .4s, transform .4s;
     }
-    .flash.ok   { background: var(--green-bg); color: var(--green); border-color: rgba(76,175,125,0.25); }
-    .flash.erro { background: var(--red-bg);   color: var(--red);   border-color: rgba(201,122,122,0.25); }
+    .flash.hide { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+    .flash.ok   { background: var(--green-bg); color: var(--green); border-color: rgba(76,175,125,.25); }
+    .flash.erro { background: var(--red-bg);   color: var(--red);   border-color: rgba(201,122,122,.25); }
+    .flash-close {
+      background: none; border: none; color: inherit; cursor: pointer;
+      font-size: 14px; line-height: 1; opacity: .6; padding: 0 2px; margin-left: 12px;
+    }
+    .flash-close:hover { opacity: 1; }
+    /* barra de progresso */
+    .flash-progress {
+      position: absolute; bottom: 0; left: 0; height: 2px;
+      animation: shrink 4s linear forwards;
+    }
+    .flash.ok   .flash-progress { background: var(--green); }
+    .flash.erro .flash-progress { background: var(--red); }
+    @keyframes shrink {
+      from { width: 100%; }
+      to   { width: 0; }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
     .page-header {
       display: flex; align-items: flex-end; justify-content: space-between;
-      margin-bottom: 32px; animation: fadeUp 0.5s ease both;
+      margin-bottom: 26px;
     }
     .page-header h1 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; }
     .page-header p  { font-size: 11px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px; }
+    .header-actions { display: flex; gap: 10px; }
 
     .btn-novo {
-      font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em;
-      text-transform: uppercase; text-decoration: none;
-      padding: 10px 20px; border: 1px solid var(--gold); color: var(--gold);
-      transition: background 0.2s, color 0.2s; white-space: nowrap;
+      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+      text-decoration: none; padding: 10px 20px;
+      border: 1px solid var(--gold); color: var(--gold);
+      transition: background .2s, color .2s;
     }
     .btn-novo:hover { background: var(--gold); color: var(--bg); }
 
-    .summary {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 16px; margin-bottom: 32px;
-      animation: fadeUp 0.55s ease both;
+    .btn-pdf {
+      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+      text-decoration: none; padding: 10px 18px;
+      border: 1px solid var(--border); color: var(--muted);
+      transition: color .2s, border-color .2s;
     }
+    .btn-pdf:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+    /* ── filtros ── */
+    .filter-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 16px 20px; margin-bottom: 22px;
+    }
+    .filter-bar form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .fg { display: flex; flex-direction: column; gap: 5px; min-width: 128px; }
+    .fg label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+    .fg select, .fg input[type="date"] {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px;
+      padding: 8px 10px; outline: none; transition: border-color .2s;
+      appearance: none;
+    }
+    .fg select:focus, .fg input:focus { border-color: var(--gold-dim); }
+    .filter-actions { display: flex; gap: 8px; align-items: flex-end; margin-left: auto; }
+    .btn-filtrar {
+      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+      padding: 9px 16px; cursor: pointer; font-family: 'DM Mono', monospace;
+      border: 1px solid var(--gold); color: var(--gold); background: transparent;
+      transition: background .2s, color .2s;
+    }
+    .btn-filtrar:hover { background: var(--gold); color: var(--bg); }
+    .btn-limpar {
+      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+      padding: 9px 14px; text-decoration: none; font-family: 'DM Mono', monospace;
+      border: 1px solid var(--border); color: var(--muted); background: transparent;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-limpar:hover { border-color: var(--muted); color: var(--text); }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .chip {
+      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+      padding: 3px 10px; background: rgba(201,168,76,.07);
+      border: 1px solid rgba(201,168,76,.2); color: var(--gold-dim);
+    }
+
+    /* ── cards ── */
+    .summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 26px; }
     .scard {
       background: var(--surface); border: 1px solid var(--border);
-      padding: 22px 24px 18px; position: relative; overflow: hidden;
+      padding: 20px 22px 16px; position: relative; overflow: hidden;
     }
     .scard::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
-    .scard.receita::after { background: linear-gradient(90deg, transparent, var(--green), transparent); }
-    .scard.despesa::after { background: linear-gradient(90deg, transparent, var(--red), transparent); }
-    .scard.saldo::after   { background: linear-gradient(90deg, transparent, var(--gold), transparent); }
-    .scard-label { font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .scard-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; }
+    .scard.receita::after { background: linear-gradient(90deg,transparent,var(--green),transparent); }
+    .scard.despesa::after { background: linear-gradient(90deg,transparent,var(--red),transparent); }
+    .scard.saldo::after   { background: linear-gradient(90deg,transparent,var(--gold),transparent); }
+    .scard-label { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .scard-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; }
     .scard.receita .scard-value { color: var(--green); }
     .scard.despesa .scard-value { color: var(--red); }
     .scard.saldo   .scard-value { color: var(--gold); }
-    .scard-prefix { font-size: 13px; margin-right: 2px; opacity: 0.6; }
+    .scard-prefix  { font-size: 13px; margin-right: 2px; opacity: .6; }
 
-    .table-wrap {
-      background: var(--surface); border: 1px solid var(--border);
-      overflow-x: auto; animation: fadeUp 0.6s ease both;
-    }
+    /* ── tabela ── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; }
     .table-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      padding: 14px 22px; border-bottom: 1px solid var(--border);
     }
     .table-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
     .table-count { font-size: 11px; color: var(--gold-dim); }
@@ -127,83 +186,91 @@
     table { width: 100%; border-collapse: collapse; }
     thead th {
       font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-      color: var(--muted); font-weight: 400; padding: 12px 20px;
+      color: var(--muted); font-weight: 400; padding: 11px 18px;
       text-align: left; border-bottom: 1px solid var(--border);
     }
-    tbody tr { border-bottom: 1px solid rgba(42,40,32,0.5); transition: background 0.15s; }
+    tbody tr { border-bottom: 1px solid rgba(42,40,32,.5); transition: background .15s; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td { padding: 13px 20px; font-size: 12px; color: var(--text); vertical-align: middle; }
+    tbody td { padding: 12px 18px; font-size: 12px; vertical-align: middle; }
 
-    .td-id   { color: var(--muted); font-size: 11px; width: 44px; }
-    .td-date { color: var(--muted); white-space: nowrap; font-size: 11px; }
+    .td-id   { color: var(--muted); font-size: 11px; width: 40px; }
+    .td-date { color: var(--muted); font-size: 11px; white-space: nowrap; }
     .td-valor { font-family: 'Cormorant Garamond', serif; font-size: 17px; white-space: nowrap; }
     .receita-val { color: var(--green); }
     .despesa-val { color: var(--red); }
 
     .badge {
       display: inline-block; font-size: 9px; letter-spacing: 0.15em;
-      text-transform: uppercase; padding: 3px 10px; border-radius: 2px;
+      text-transform: uppercase; padding: 3px 9px;
     }
-    .badge-receita { background: var(--green-bg); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
-    .badge-despesa { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(201,122,122,0.2); }
-    .badge-ativo   { background: rgba(201,168,76,0.07); color: var(--gold-dim); border: 1px solid rgba(201,168,76,0.15); }
-    .badge-inativo { background: rgba(80,80,80,0.15); color: var(--muted); border: 1px solid rgba(100,100,100,0.2); }
+    .badge-receita { background: var(--green-bg); color: var(--green); border: 1px solid rgba(76,175,125,.2); }
+    .badge-despesa { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(201,122,122,.2); }
+    .badge-ativo   { background: rgba(201,168,76,.07); color: var(--gold-dim); border: 1px solid rgba(201,168,76,.15); }
+    .badge-inativo { background: rgba(80,80,80,.12);   color: var(--muted);    border: 1px solid rgba(100,100,100,.2); }
 
     .td-actions { white-space: nowrap; }
     .btn-edit, .btn-del {
-      font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.15em;
-      text-transform: uppercase; padding: 5px 12px; border: 1px solid;
-      cursor: pointer; text-decoration: none; display: inline-block;
-      transition: background 0.15s, color 0.15s;
+      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+      padding: 5px 11px; border: 1px solid; cursor: pointer;
+      text-decoration: none; display: inline-block; font-family: 'DM Mono', monospace;
+      transition: background .15s, color .15s;
     }
-    .btn-edit { color: var(--gold-dim); border-color: var(--border); margin-right: 6px; }
+    .btn-edit { color: var(--gold-dim); border-color: var(--border); margin-right: 5px; background: transparent; }
     .btn-edit:hover { background: var(--gold); color: var(--bg); border-color: var(--gold); }
-    .btn-del  { color: var(--muted); border-color: var(--border); background: transparent; }
+    .btn-del  { color: var(--muted);    border-color: var(--border); background: transparent; }
     .btn-del:hover { background: var(--red); color: var(--bg); border-color: var(--red); }
 
-    /* confirm dialog */
+    /* ── modal ── */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7); z-index: 200;
+      background: rgba(0,0,0,.7); z-index: 200;
       align-items: center; justify-content: center;
     }
     .modal-overlay.open { display: flex; }
     .modal {
       background: var(--surface); border: 1px solid var(--border);
-      padding: 36px 40px; width: 360px; position: relative;
+      padding: 34px 38px; width: 340px; position: relative;
     }
     .modal::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      background: linear-gradient(90deg,transparent,var(--red),transparent);
     }
-    .modal h3 { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; margin-bottom: 10px; }
-    .modal p  { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 28px; line-height: 1.7; }
-    .modal-actions { display: flex; gap: 12px; }
+    .modal h3 { font-family: 'Cormorant Garamond', serif; font-size: 21px; font-weight: 300; margin-bottom: 10px; }
+    .modal p  { font-size: 11px; color: var(--muted); margin-bottom: 26px; line-height: 1.7; }
+    .modal-actions { display: flex; gap: 10px; }
     .btn-cancel {
       flex: 1; padding: 10px; font-family: 'DM Mono', monospace; font-size: 10px;
       letter-spacing: 0.2em; text-transform: uppercase; background: transparent;
       border: 1px solid var(--border); color: var(--muted); cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
+      transition: border-color .2s, color .2s;
     }
     .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
     .btn-confirm-del {
       flex: 1; padding: 10px; font-family: 'DM Mono', monospace; font-size: 10px;
       letter-spacing: 0.2em; text-transform: uppercase; background: transparent;
       border: 1px solid var(--red); color: var(--red); cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: background .2s, color .2s;
     }
     .btn-confirm-del:hover { background: var(--red); color: var(--bg); }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(14px); }
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    main > * { animation: fadeUp .45s ease both; }
+    main > *:nth-child(2) { animation-delay: .05s; }
+    main > *:nth-child(3) { animation-delay: .1s; }
+    main > *:nth-child(4) { animation-delay: .15s; }
+    main > *:nth-child(5) { animation-delay: .2s; }
+
     @media (max-width: 700px) {
       .summary { grid-template-columns: 1fr; }
       nav { padding: 0 16px; }
-      main { padding: 24px 12px 40px; }
+      main { padding: 20px 12px 40px; }
       .page-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .filter-bar form { flex-direction: column; }
+      .filter-actions { margin-left: 0; }
     }
   </style>
 </head>
@@ -224,7 +291,13 @@
 
   {% with msgs = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in msgs %}
-      <div class="flash {{ cat }}">{{ msg }}</div>
+    <div class="flash-wrap">
+      <div class="flash {{ cat }}" data-flash>
+        <span>{{ msg }}</span>
+        <button class="flash-close" onclick="dismissFlash(this.parentElement)">✕</button>
+        <span class="flash-progress"></span>
+      </div>
+    </div>
     {% endfor %}
   {% endwith %}
 
@@ -233,8 +306,54 @@
       <h1>Lançamentos</h1>
       <p>Extrato financeiro · Receitas e Despesas</p>
     </div>
-    <a href="/lancamentos/novo" class="btn-novo">+ Novo Lançamento</a>
+    <div class="header-actions">
+      <a href="/lancamentos/exportar-pdf?tipo={{ filtro_tipo }}&situacao={{ filtro_situacao }}&data_ini={{ filtro_data_ini }}&data_fim={{ filtro_data_fim }}"
+         class="btn-pdf">⬇ Exportar PDF</a>
+      <a href="/lancamentos/novo" class="btn-novo">+ Novo Lançamento</a>
+    </div>
   </div>
+
+  <div class="filter-bar">
+    <form method="GET" action="/lancamentos">
+      <div class="fg">
+        <label>Tipo</label>
+        <select name="tipo">
+          <option value="">Todos</option>
+          <option value="receita" {% if filtro_tipo == 'receita' %}selected{% endif %}>Receita</option>
+          <option value="despesa" {% if filtro_tipo == 'despesa' %}selected{% endif %}>Despesa</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Situação</label>
+        <select name="situacao">
+          <option value="">Todas</option>
+          <option value="ativo"   {% if filtro_situacao == 'ativo'   %}selected{% endif %}>Ativo</option>
+          <option value="inativo" {% if filtro_situacao == 'inativo' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>De</label>
+        <input type="date" name="data_ini" value="{{ filtro_data_ini }}"/>
+      </div>
+      <div class="fg">
+        <label>Até</label>
+        <input type="date" name="data_fim" value="{{ filtro_data_fim }}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn-filtrar">Filtrar</button>
+        <a href="/lancamentos" class="btn-limpar">Limpar</a>
+      </div>
+    </form>
+  </div>
+
+  {% if filtro_tipo or filtro_situacao or filtro_data_ini or filtro_data_fim %}
+  <div class="chips">
+    {% if filtro_tipo      %}<span class="chip">Tipo: {{ filtro_tipo }}</span>{% endif %}
+    {% if filtro_situacao  %}<span class="chip">Situação: {{ filtro_situacao }}</span>{% endif %}
+    {% if filtro_data_ini  %}<span class="chip">De: {{ filtro_data_ini }}</span>{% endif %}
+    {% if filtro_data_fim  %}<span class="chip">Até: {{ filtro_data_fim }}</span>{% endif %}
+  </div>
+  {% endif %}
 
   <div class="summary">
     <div class="scard receita">
@@ -259,13 +378,7 @@
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Descrição</th>
-          <th>Data</th>
-          <th>Tipo</th>
-          <th>Valor</th>
-          <th>Situação</th>
-          <th>Ações</th>
+          <th>#</th><th>Descrição</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Situação</th><th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -275,22 +388,17 @@
           <td>{{ r.descricao }}</td>
           <td class="td-date">{{ r.data_lancamento.strftime('%d/%m/%Y') }}</td>
           <td>
-            {% if r.tipo_lancamento == 'receita' %}
-              <span class="badge badge-receita">Receita</span>
-            {% else %}
-              <span class="badge badge-despesa">Despesa</span>
-            {% endif %}
+            <span class="badge badge-{{ r.tipo_lancamento }}">
+              {{ 'Receita' if r.tipo_lancamento == 'receita' else 'Despesa' }}
+            </span>
           </td>
-          <td class="td-valor {% if r.tipo_lancamento == 'receita' %}receita-val{% else %}despesa-val{% endif %}">
-            {% if r.tipo_lancamento == 'despesa' %}−{% endif %}
-            R$ {{ "%.2f"|format(r.valor) }}
+          <td class="td-valor {{ 'receita-val' if r.tipo_lancamento == 'receita' else 'despesa-val' }}">
+            {{ '−' if r.tipo_lancamento == 'despesa' else '' }} R$ {{ "%.2f"|format(r.valor) }}
           </td>
           <td>
-            {% if r.situacao == 'ativo' %}
-              <span class="badge badge-ativo">Ativo</span>
-            {% else %}
-              <span class="badge badge-inativo">Inativo</span>
-            {% endif %}
+            <span class="badge badge-{{ r.situacao }}">
+              {{ 'Ativo' if r.situacao == 'ativo' else 'Inativo' }}
+            </span>
           </td>
           <td class="td-actions">
             <a href="/lancamentos/editar/{{ r.id }}" class="btn-edit">Editar</a>
@@ -301,23 +409,34 @@
       </tbody>
     </table>
   </div>
+
 </main>
 
-<!-- Modal de confirmação -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <h3>Confirmar exclusão</h3>
-    <p id="modalMsg">Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.</p>
+    <p id="modalMsg"></p>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-      <form id="formExcluir" method="POST">
-        <button type="submit" class="btn-confirm-del">Excluir</button>
+      <form id="formExcluir" method="POST" style="flex:1;">
+        <button type="submit" class="btn-confirm-del" style="width:100%;">Excluir</button>
       </form>
     </div>
   </div>
 </div>
 
 <script>
+  // ── flash auto-dismiss ──────────────────────────────────────────────────────
+  function dismissFlash(el) {
+    el.classList.add('hide');
+    setTimeout(() => el.closest('.flash-wrap')?.remove(), 420);
+  }
+
+  document.querySelectorAll('[data-flash]').forEach(el => {
+    setTimeout(() => dismissFlash(el), 4000);
+  });
+
+  // ── modal ───────────────────────────────────────────────────────────────────
   function abrirModal(id, desc) {
     document.getElementById('formExcluir').action = '/lancamentos/excluir/' + id;
     document.getElementById('modalMsg').textContent =
@@ -327,8 +446,8 @@
   function fecharModal() {
     document.getElementById('modalOverlay').classList.remove('open');
   }
-  document.getElementById('modalOverlay').addEventListener('click', function(e) {
-    if (e.target === this) fecharModal();
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) fecharModal();
   });
 </script>
 
