@@ -379,7 +379,7 @@
     <table>
       <thead>
         <tr>
-          <th>#</th><th>Descrição</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Situação</th><th>Ações</th>
+          <th>#</th><th>Descrição</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Situação</th><th>Observação</th><th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -401,6 +401,7 @@
               {{ 'Ativo' if r.situacao == 'ativo' else 'Inativo' }}
             </span>
           </td>
+          <td>{{ r.observacao }}</td>
           <td class="td-actions">
             <a href="/lancamentos/editar/{{ r.id }}" class="btn-edit">Editar</a>
             <button class="btn-del" onclick="abrirModal({{ r.id }}, '{{ r.descricao|e }}')">Excluir</button>

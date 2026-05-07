@@ -272,6 +272,7 @@ def novo_lancamento():
         valor           = request.form['valor'].replace(',', '.')
         tipo_lancamento = request.form['tipo_lancamento']
         situacao        = request.form.get('situacao', 'ativo')
+        observacao      = request.form.get('observacao', '').strip()
 
         if not all([descricao, data_lancamento, valor, tipo_lancamento]):
             erro = 'Preencha todos os campos obrigatórios.'
@@ -280,9 +281,9 @@ def novo_lancamento():
                 conn = get_conn()
                 cur  = conn.cursor()
                 cur.execute(
-                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao)
-                       VALUES (%s, %s, %s, %s, %s) RETURNING id""",
-                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao)
+                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
+                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
+                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao)
                 )
                 novo_id = cur.fetchone()[0]
                 conn.commit()
@@ -292,7 +293,7 @@ def novo_lancamento():
                 enviar_email(
                     assunto=f'[Aurum] Novo lançamento — {descricao}',
                     campos=dict(id=novo_id, descricao=descricao, data_lancamento=data_lancamento,
-                                valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao),
+                                valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao, observacao=observacao),
                     acao='criado',
                     email_destinatario=session.get('usuario_email', ''),
                 )
@@ -319,6 +320,7 @@ def editar_lancamento(id):
         valor           = request.form['valor'].replace(',', '.')
         tipo_lancamento = request.form['tipo_lancamento']
         situacao        = request.form.get('situacao', 'ativo')
+        observacao      = request.form.get('observacao', '')
 
         if not all([descricao, data_lancamento, valor, tipo_lancamento]):
             erro = 'Preencha todos os campos obrigatórios.'
@@ -327,9 +329,9 @@ def editar_lancamento(id):
                 cur.execute(
                     """UPDATE lancamento
                        SET descricao=%s, data_lancamento=%s, valor=%s,
-                           tipo_lancamento=%s, situacao=%s
+                           tipo_lancamento=%s, situacao=%s, observacao=%s
                        WHERE id=%s""",
-                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, id)
+                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, id)
                 )
                 conn.commit()
                 cur.close(); conn.close()
@@ -338,7 +340,7 @@ def editar_lancamento(id):
                 enviar_email(
                     assunto=f'[Aurum] Lançamento atualizado — {descricao}',
                     campos=dict(id=id, descricao=descricao, data_lancamento=data_lancamento,
-                                valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao),
+                                valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao, observacao=observacao),
                     acao='atualizado',
                     email_destinatario=session.get('usuario_email', ''),
                 )
