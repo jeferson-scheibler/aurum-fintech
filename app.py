@@ -22,11 +22,11 @@ app = Flask(__name__)
 app.secret_key = 'aurum_secret_2026'
 
 DB_CONFIG = {
-    'dbname': 'financas_db',
-    'user': 'fintech',
-    'password': 'Fin407',
-    'host': 'localhost',
-    'port': 5432
+    'dbname': os.getenv('DB_NAME', 'financas_db'),
+    'user':   os.getenv('DB_USER', 'fintech'),
+    'password': os.getenv('DB_PASS', 'Fin407'),
+    'host':   os.getenv('DB_HOST', 'localhost'),
+    'port':   int(os.getenv('DB_PORT', 5432)),
 }
 
 SMTP_HOST    = os.getenv('SMTP_HOST', 'smtp.gmail.com')

@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aurum_db_prod
+    environment:
+      POSTGRES_DB:       financas_db
+      POSTGRES_USER:     fintech
+      POSTGRES_PASSWORD: Fin407
+    volumes:
+      - aurum_db_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fintech -d financas_db"]
+      interval: 5s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:10-alpine
+    container_name: aurum_flyway_prod
+    command: migrate
+    environment:
+      FLYWAY_URL:      jdbc:postgresql://db:5432/financas_db
+      FLYWAY_USER:     fintech
+      FLYWAY_PASSWORD: Fin407
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    volumes:
+      - ./migrations:/flyway/sql
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: aurum_app_prod
+    ports:
+      - "8082:5000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: financas_db
+      DB_USER: fintech
+      DB_PASS: Fin407
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+
+volumes:
+  aurum_db_prod:
