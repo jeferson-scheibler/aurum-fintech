@@ -62,7 +62,7 @@ SENHA=$(sudo docker exec aurum_jenkins cat /var/jenkins_home/secrets/initialAdmi
 
 separador "Pronto!"
 echo ""
-echo "  Jenkins:  http://$IP:8080"
+echo "  Jenkins:  http://$IP:8090"
 echo ""
 echo "  Senha inicial:"
 echo "  $SENHA"
