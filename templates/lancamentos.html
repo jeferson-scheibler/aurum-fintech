@@ -55,6 +55,13 @@
       transition: color .2s, border-color .2s;
     }
     .btn-logout:hover { color: var(--red); border-color: var(--red); }
+    .btn-nav {
+      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); padding: 6px 14px;
+      transition: color .2s, border-color .2s;
+    }
+    .btn-nav:hover { color: var(--gold); border-color: var(--gold-dim); }
 
     main {
       position: relative; z-index: 1;
@@ -171,7 +178,9 @@
     .scard-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; }
     .scard.receita .scard-value { color: var(--green); }
     .scard.despesa .scard-value { color: var(--red); }
-    .scard.saldo   .scard-value { color: var(--gold); }
+    .scard.saldo     .scard-value { color: var(--gold); }
+    .scard.saldo-neg::after      { background: linear-gradient(90deg,transparent,var(--red),transparent); }
+    .scard.saldo-neg .scard-value { color: var(--red); }
     .scard-prefix  { font-size: 13px; margin-right: 2px; opacity: .6; }
 
     /* ── tabela ── */
@@ -209,6 +218,7 @@
     .badge-ativo   { background: rgba(201,168,76,.07); color: var(--gold-dim); border: 1px solid rgba(201,168,76,.15); }
     .badge-inativo { background: rgba(80,80,80,.12);   color: var(--muted);    border: 1px solid rgba(100,100,100,.2); }
 
+    .td-obs { color: var(--muted); font-size: 11px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .td-actions { white-space: nowrap; }
     .btn-edit, .btn-del {
       font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
@@ -283,7 +293,7 @@
   </div>
   <div class="nav-right">
     <span class="nav-user">Olá, <span>{{ usuario_nome }}</span></span>
-    <a href="/perfil" class="btn-logout">Perfil</a>
+    <a href="/perfil" class="btn-nav">Perfil</a>
     <a href="/logout" class="btn-logout">Sair</a>
   </div>
 </nav>
@@ -359,15 +369,15 @@
   <div class="summary">
     <div class="scard receita">
       <div class="scard-label">Total Receitas</div>
-      <div class="scard-value"><span class="scard-prefix">R$</span>{{ "%.2f"|format(total_receitas) }}</div>
+      <div class="scard-value">{{ total_receitas | brl }}</div>
     </div>
     <div class="scard despesa">
       <div class="scard-label">Total Despesas</div>
-      <div class="scard-value"><span class="scard-prefix">R$</span>{{ "%.2f"|format(total_despesas) }}</div>
+      <div class="scard-value">{{ total_despesas | brl }}</div>
     </div>
-    <div class="scard saldo">
+    <div class="scard {{ 'saldo-neg' if saldo < 0 else 'saldo' }}">
       <div class="scard-label">Saldo</div>
-      <div class="scard-value"><span class="scard-prefix">R$</span>{{ "%.2f"|format(saldo) }}</div>
+      <div class="scard-value">{{ saldo | brl }}</div>
     </div>
   </div>
 
@@ -394,14 +404,14 @@
             </span>
           </td>
           <td class="td-valor {{ 'receita-val' if r.tipo_lancamento == 'receita' else 'despesa-val' }}">
-            {{ '−' if r.tipo_lancamento == 'despesa' else '' }} R$ {{ "%.2f"|format(r.valor) }}
+            {{ '−&nbsp;' if r.tipo_lancamento == 'despesa' else '' }}{{ r.valor | brl }}
           </td>
           <td>
             <span class="badge badge-{{ r.situacao }}">
               {{ 'Ativo' if r.situacao == 'ativo' else 'Inativo' }}
             </span>
           </td>
-          <td>{{ r.observacao }}</td>
+          <td class="td-obs">{{ r.observacao or '—' }}</td>
           <td class="td-actions">
             <a href="/lancamentos/editar/{{ r.id }}" class="btn-edit">Editar</a>
             <button class="btn-del" onclick="abrirModal({{ r.id }}, '{{ r.descricao|e }}')">Excluir</button>

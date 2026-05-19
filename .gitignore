@@ -1,1 +1,6 @@
 .env
+app.log
+__pycache__/
+*.pyc
+*.pyo
+.claude/

@@ -21,6 +21,10 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'aurum_secret_2026'
 
+@app.template_filter('brl')
+def brl_filter(value):
+    return f"R$ {float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 DB_CONFIG = {
     'dbname': os.getenv('DB_NAME', 'financas_db'),
     'user':   os.getenv('DB_USER', 'fintech'),

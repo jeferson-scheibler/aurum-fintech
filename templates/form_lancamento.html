@@ -97,13 +97,15 @@
     input[type="text"],
     input[type="date"],
     input[type="number"],
-    select {
+    select,
+    textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
       color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
       padding: 11px 13px; outline: none; transition: border-color 0.2s;
       appearance: none; -webkit-appearance: none;
     }
-    input:focus, select:focus { border-color: var(--gold-dim); }
+    textarea { resize: vertical; min-height: 80px; }
+    input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); }
     select option { background: var(--surface); }
 
     .form-actions { display: flex; gap: 12px; margin-top: 28px; }
@@ -198,10 +200,11 @@
             <option value="inativo" {% if lancamento and lancamento.situacao == 'inativo' %}selected{% endif %}>Inativo</option>
           </select>
         </div>
-        <div>
-          <label for="observacao">Observação</label>
-	  <textarea id="observacao" name="observacao" maxlength="255" placeholder="Ex: Salário, Aluguel..." >{{ lancamento.observacao if lancamento }}</textarea>
-        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="observacao">Observação</label>
+        <textarea id="observacao" name="observacao" maxlength="500" placeholder="Informações adicionais sobre o lançamento...">{{ lancamento.observacao if lancamento else '' }}</textarea>
       </div>
 
       <div class="form-actions">
