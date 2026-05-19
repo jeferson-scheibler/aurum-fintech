@@ -1,0 +1,16 @@
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    container_name: aurum_jenkins
+    user: root
+    ports:
+      - "8080:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/univates/aurum-fintech:/home/univates/aurum-fintech
+
+volumes:
+  jenkins_home:
