@@ -7,10 +7,13 @@ services:
     user: root
     ports:
       - "8090:8080"
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/univates/aurum-fintech:/home/univates/aurum-fintech
+      - ./jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d
 
 volumes:
   jenkins_home:

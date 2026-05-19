@@ -50,7 +50,7 @@ separador "Subindo Jenkins"
 sudo docker compose -f docker-compose.jenkins.yml up -d --build
 
 echo "Aguardando Jenkins inicializar..."
-until sudo docker exec aurum_jenkins test -f /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null; do
+until sudo docker exec aurum_jenkins curl -s http://localhost:8080/login &>/dev/null; do
     sleep 3
     printf "."
 done
@@ -58,17 +58,13 @@ echo ""
 
 # ── 5. resultado ────────────────────────────────────────────────────────────────
 IP=$(hostname -I | awk '{print $1}')
-SENHA=$(sudo docker exec aurum_jenkins cat /var/jenkins_home/secrets/initialAdminPassword)
 
 separador "Pronto!"
 echo ""
 echo "  Jenkins:  http://$IP:8090"
+echo "  Login:    admin"
+echo "  Senha:    admin123"
 echo ""
-echo "  Senha inicial:"
-echo "  $SENHA"
-echo ""
-echo "  Próximos passos:"
-echo "  1. Acesse o Jenkins e faça o setup inicial"
-echo "  2. Crie um job Pipeline com o conteúdo do Jenkinsfile"
-echo "  3. Use o job para subir homolog e prod"
+echo "  O job 'Deploy Aurum' já está criado e pronto para uso."
+echo "  Acesse o Jenkins e clique em 'Build with Parameters'."
 echo ""
