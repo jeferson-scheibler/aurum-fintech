@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 *.pyo
 .claude/
+jenkins/jobs/deploy-aurum/builds/
+jenkins/jobs/deploy-aurum/lastStable
+jenkins/jobs/deploy-aurum/lastSuccessful
+jenkins/jobs/deploy-aurum/nextBuildNumber
