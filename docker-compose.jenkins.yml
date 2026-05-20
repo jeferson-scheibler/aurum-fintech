@@ -14,6 +14,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/univates/aurum-fintech:/home/univates/aurum-fintech
       - ./jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d
+      - ./jenkins/jobs/deploy-aurum:/var/jenkins_home/jobs/deploy-aurum
 
 volumes:
   jenkins_home:
