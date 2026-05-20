@@ -25,6 +25,13 @@
         choice(name: 'AMBIENTE', choices: ['homolog', 'prod'], description: 'Ambiente a ser atualizado')
     }
     stages {
+        stage('Atualizar código') {
+            steps {
+                dir('/home/univates/aurum-fintech') {
+                    sh 'git pull'
+                }
+            }
+        }
         stage('Deploy') {
             steps {
                 dir('/home/univates/aurum-fintech') {
