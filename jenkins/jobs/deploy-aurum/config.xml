@@ -1,5 +1,16 @@
 <?xml version='1.1' encoding='UTF-8'?>
-<flow-definition plugin="workflow-job">
+<flow-definition plugin="workflow-job@1571.1580.v18e46842c125">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2291.v2934911987b_6"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2291.v2934911987b_6">
+      <jobProperties/>
+      <triggers/>
+      <parameters>
+        <string>AMBIENTE</string>
+      </parameters>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
   <description>Deploy semi-automatizado para homolog e prod</description>
   <keepDependencies>false</keepDependencies>
   <properties>
@@ -7,43 +18,43 @@
       <parameterDefinitions>
         <hudson.model.ChoiceParameterDefinition>
           <name>AMBIENTE</name>
+          <description>Ambiente a ser atualizado</description>
           <choices class="java.util.Arrays$ArrayList">
             <a class="string-array">
               <string>homolog</string>
               <string>prod</string>
             </a>
           </choices>
-          <description>Ambiente a ser atualizado</description>
         </hudson.model.ChoiceParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
-  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4331.v9d06ed4658ff">
     <script>pipeline {
     agent any
     parameters {
-        choice(name: 'AMBIENTE', choices: ['homolog', 'prod'], description: 'Ambiente a ser atualizado')
+        choice(name: &apos;AMBIENTE&apos;, choices: [&apos;homolog&apos;, &apos;prod&apos;], description: &apos;Ambiente a ser atualizado&apos;)
     }
     stages {
-        stage('Atualizar código') {
+        stage(&apos;Atualizar código&apos;) {
             steps {
-                dir('/home/univates/aurum-fintech') {
-                    sh 'git pull'
+                dir(&apos;/home/univates/aurum-fintech&apos;) {
+                    sh &apos;git config --global --add safe.directory /home/univates/aurum-fintech &amp;&amp; git pull&apos;
                 }
             }
         }
-        stage('Deploy') {
+        stage(&apos;Deploy&apos;) {
             steps {
-                dir('/home/univates/aurum-fintech') {
-                    sh "chmod +x deploy-${params.AMBIENTE}.sh"
-                    sh "./deploy-${params.AMBIENTE}.sh"
+                dir(&apos;/home/univates/aurum-fintech&apos;) {
+                    sh &quot;chmod +x deploy-${params.AMBIENTE}.sh&quot;
+                    sh &quot;./deploy-${params.AMBIENTE}.sh&quot;
                 }
             }
         }
     }
     post {
-        success { echo "Deploy em ${params.AMBIENTE} concluido com sucesso." }
-        failure  { echo "Deploy em ${params.AMBIENTE} falhou." }
+        success { echo &quot;Deploy em ${params.AMBIENTE} concluido com sucesso.&quot; }
+        failure  { echo &quot;Deploy em ${params.AMBIENTE} falhou.&quot; }
     }
 }</script>
     <sandbox>true</sandbox>
