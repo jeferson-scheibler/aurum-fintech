@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     id       SERIAL PRIMARY KEY,
     nome     VARCHAR(100),
     login    VARCHAR(50) UNIQUE,
-    senha    VARCHAR(100),
+    senha    VARCHAR(255),
     email    VARCHAR(150),
     situacao VARCHAR(20) DEFAULT 'ativo'
 );

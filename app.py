@@ -14,12 +14,15 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle, Paragraph, Frame
 
+from werkzeug.security import check_password_hash
+
 from dotenv import load_dotenv
 import os
+import secrets
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'aurum_secret_2026'
+app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
 
 @app.template_filter('brl')
 def brl_filter(value):
@@ -162,12 +165,12 @@ def login():
             conn = get_conn()
             cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
-                "SELECT * FROM usuario WHERE login = %s AND senha = %s AND situacao = 'ativo'",
-                (login_input, senha_input)
+                "SELECT * FROM usuario WHERE login = %s AND situacao = 'ativo'",
+                (login_input,)
             )
             usuario = cur.fetchone()
             cur.close(); conn.close()
-            if usuario:
+            if usuario and check_password_hash(usuario['senha'], senha_input):
                 session['usuario_id']    = usuario['id']
                 session['usuario_nome']  = usuario['nome']
                 session['usuario_email'] = usuario['email'] or ''
@@ -584,4 +587,5 @@ def exportar_pdf():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    app.run(host='0.0.0.0', port=5000, debug=debug)

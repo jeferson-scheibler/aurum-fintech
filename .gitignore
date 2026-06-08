@@ -1,10 +1,38 @@
+# Segredos e configurações locais
 .env
+.env.local
+*.pem
+*.key
+
+# Logs
 app.log
+*.log
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Artefatos de teste/relatórios
+relatorio-testes.html
+*.pdf
+
+# IDE
 .claude/
+.vscode/
+.idea/
+*.swp
+
+# Jenkins runtime (gerado dentro do volume)
 jenkins/jobs/deploy-aurum/builds/
 jenkins/jobs/deploy-aurum/lastStable
 jenkins/jobs/deploy-aurum/lastSuccessful
 jenkins/jobs/deploy-aurum/nextBuildNumber
+
+# SO
+.DS_Store
+Thumbs.db

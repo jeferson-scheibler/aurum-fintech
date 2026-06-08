@@ -81,11 +81,12 @@ O pipeline é disparado automaticamente a cada `push` ou `pull request` na branc
 **job `test`**
 - Sobe um container PostgreSQL 16 como service do runner
 - Aplica as migrations com Flyway via Docker
-- Executa os 20 testes com `pytest -v`
+- Executa os 22 testes com `pytest -v`
 - Gera o relatório HTML (`relatorio-testes.html`) e publica como artifact
 
 **job `quality`** *(depende de `test`)*
 - Executa o scan do SonarCloud para análise estática do código
+- Aguarda o Quality Gate do SonarCloud e **falha o pipeline** se o gate reprovar
 
 **job `build`** *(depende de `test` e `quality`)*
 - Constrói a imagem Docker da aplicação para validar que o build está íntegro
@@ -114,15 +115,17 @@ As migrations ficam em `migrations/` seguindo o padrão Flyway (`V{n}__{descrica
 ```
 migrations/
 ├── V1__init.sql          # cria tabelas usuario e lancamento
-├── V2__seed_inicial.sql  # dados iniciais (usuário admin + lançamentos de exemplo)
+├── V2__seed_inicial.sql  # único usuário admin (admin/admin123) — sem lançamentos seed
 └── V3__add_observacao.sql# adiciona coluna observacao em lancamento
 ```
+
+> ⚠ As senhas no banco são armazenadas com hash `pbkdf2:sha256` (`werkzeug.security`).
 
 ---
 
 ## Testes automatizados
 
-São 22 testes cobrindo os principais fluxos da aplicação:
+São 22 testes cobrindo os principais fluxos da aplicação (admin padrão: `admin/admin123`):
 
 | # | Teste |
 |---|---|
@@ -197,7 +200,7 @@ aurum-fintech/
 ├── migrations/                    # migrations Flyway
 ├── templates/                     # páginas HTML (Jinja2)
 ├── app.py                         # rotas e lógica da aplicação
-├── test_app.py                    # 20 testes automatizados
+├── test_app.py                    # 22 testes automatizados
 ├── Dockerfile                     # imagem da aplicação
 ├── docker-compose.homolog.yml     # ambiente de homologação
 ├── docker-compose.prod.yml        # ambiente de produção

@@ -35,7 +35,7 @@ def limpar_lancamentos_teste():
 # login e sessão
 
 def test_login_valido(client):
-    resp = client.post('/', data={'login': 'fin_admin', 'senha': 'Fin407'},
+    resp = client.post('/', data={'login': 'admin', 'senha': 'admin123'},
                        follow_redirects=True)
     assert resp.status_code == 200
     assert 'Lançamentos'.encode() in resp.data

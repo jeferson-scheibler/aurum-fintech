@@ -2,7 +2,9 @@
 set -e
 
 REPO_URL="https://github.com/jeferson-scheibler/aurum-fintech.git"
-PROJETO="$HOME/aurum-fintech"
+# Path fixo para bater com os volumes do docker-compose.jenkins.yml e do Jenkinsfile.
+PROJETO="/home/univates/aurum-fintech"
+PARENT_DIR="$(dirname "$PROJETO")"
 
 separador() { echo ""; echo "──────────────────────────────────────────"; echo "  $1"; echo "──────────────────────────────────────────"; }
 
@@ -35,7 +37,10 @@ $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
 fi
 
 # ── 3. projeto ──────────────────────────────────────────────────────────────────
-separador "Clonando o projeto"
+separador "Clonando o projeto em $PROJETO"
+sudo mkdir -p "$PARENT_DIR"
+sudo chown -R "$USER":"$USER" "$PARENT_DIR"
+
 if [ -d "$PROJETO" ]; then
     echo "Projeto já existe, atualizando..."
     git -C "$PROJETO" pull
@@ -44,6 +49,17 @@ else
 fi
 
 cd "$PROJETO"
+
+# ── 3.1 .env ────────────────────────────────────────────────────────────────────
+if [ ! -f .env ]; then
+    if [ -f .env.example ]; then
+        cp .env.example .env
+        echo ""
+        echo "⚠  .env criado a partir de .env.example com valores padrao."
+        echo "   Edite $PROJETO/.env e ajuste SECRET_KEY/DB_PASS/JENKINS_ADMIN_PASSWORD antes de algo serio."
+        echo ""
+    fi
+fi
 
 # ── 4. Jenkins ──────────────────────────────────────────────────────────────────
 separador "Subindo Jenkins"

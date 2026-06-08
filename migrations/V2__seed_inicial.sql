@@ -1,10 +1,6 @@
+-- Único usuário inicial: admin / admin123 (hash pbkdf2:sha256, gerado com werkzeug.security)
 INSERT INTO usuario (nome, login, senha, situacao) VALUES
-('Administrador', 'fin_admin', 'Fin407', 'ativo')
+('Administrador', 'admin',
+ 'pbkdf2:sha256:1000000$TwPEEdmjhtx67yXP$fb274296f99bfa49523bca2bbd2bc6b3a8991012470f6d957b616c52a3c9cb0a',
+ 'ativo')
 ON CONFLICT (login) DO NOTHING;
-
-INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao) VALUES
-('Salário março',        '2026-03-05', 4500.00, 'receita', 'ativo'),
-('Aluguel',              '2026-03-10', 1200.00, 'despesa', 'ativo'),
-('Freelance web',        '2026-03-12',  800.00, 'receita', 'ativo'),
-('Supermercado',         '2026-03-14',  350.00, 'despesa', 'ativo'),
-('Internet',             '2026-03-15',   99.90, 'despesa', 'ativo');
