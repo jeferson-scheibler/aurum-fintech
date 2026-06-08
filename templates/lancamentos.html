@@ -383,8 +383,9 @@
 
   <div class="table-wrap">
     <div class="table-head">
-      <span class="table-title">Extrato de lançamentos</span>
-      <span class="table-count">{{ registros|length }} registros</span>
+      <span class="table-title">Extrato</span>
+      <span class="table-count">{{ registros|length }} registros</span
+        >
     </div>
     <table>
       <thead>
@@ -414,7 +415,10 @@
           <td class="td-obs">{{ r.observacao or '—' }}</td>
           <td class="td-actions">
             <a href="/lancamentos/editar/{{ r.id }}" class="btn-edit">Editar</a>
-            <button class="btn-del" onclick="abrirModal({{ r.id }}, '{{ r.descricao|e }}')">Excluir</button>
+            <button class="btn-del"
+                    data-id="{{ r.id }}"
+                    data-descricao="{{ r.descricao|e }}"
+                    onclick="abrirModal(this.dataset.id, this.dataset.descricao)">Excluir</button>
           </td>
         </tr>
         {% endfor %}
