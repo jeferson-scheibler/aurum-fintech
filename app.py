@@ -36,6 +36,8 @@ DB_CONFIG = {
     'port':   int(os.getenv('DB_PORT', 5432)),
 }
 
+admin_password = "admin123"
+
 SMTP_HOST    = os.getenv('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT    = int(os.getenv('SMTP_PORT', 587))
 SMTP_USUARIO = os.getenv('SMTP_USUARIO', '')
