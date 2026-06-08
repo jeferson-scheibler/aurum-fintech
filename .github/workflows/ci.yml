@@ -73,15 +73,17 @@ jobs:
           fetch-depth: 0
 
       - name: SonarCloud scan
-        uses: SonarSource/sonarcloud-github-action@v3
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
       - name: Quality Gate (falha se reprovado)
         uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
   build:
     runs-on: ubuntu-latest
