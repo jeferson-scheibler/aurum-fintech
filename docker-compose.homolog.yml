@@ -1,3 +1,5 @@
+name: aurum-homolog
+
 services:
   db:
     image: postgres:16-alpine

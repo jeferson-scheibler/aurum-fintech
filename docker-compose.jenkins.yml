@@ -1,3 +1,5 @@
+name: aurum-jenkins
+
 services:
   jenkins:
     build:
