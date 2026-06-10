@@ -28,13 +28,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Aplicar migrations
+        env:
+          FLYWAY_PASSWORD: ${{ secrets.DB_PASS }}
         run: |
           docker run --rm \
             --network host \
             -v ${{ github.workspace }}/migrations:/flyway/sql \
             -e FLYWAY_URL=jdbc:postgresql://localhost:5432/financas_db \
             -e FLYWAY_USER=fintech \
-            -e FLYWAY_PASSWORD=${{ secrets.DB_PASS }} \
+            -e FLYWAY_PASSWORD \
             flyway/flyway:10-alpine migrate
 
       - uses: actions/setup-python@v5
