@@ -618,7 +618,7 @@ def exportar_pdf():
     return resp
 
 def _demo_qualidade(saldo):
-    resultado = 0          # ruff F841: variável atribuída e nunca usada
+#    resultado = 0          # ruff F841: variável atribuída e nunca usada
     if saldo == saldo:     # Sonar S1764: expressões idênticas dos dois lados
         return True
     return False
