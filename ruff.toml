@@ -1,0 +1,8 @@
+line-length = 120
+
+[lint]
+select = ["E", "F"]
+ignore = ["E501"]  # linhas longas (HTML inline no email)
+
+[lint.per-file-ignores]
+"test_app.py" = ["E402"]  # imports fora do topo por necessidade do fixture

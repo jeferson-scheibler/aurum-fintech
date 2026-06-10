@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_DB:       financas_db
           POSTGRES_USER:     fintech
-          POSTGRES_PASSWORD: Fin407
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASS }}
         options: >-
           --health-cmd "pg_isready -U fintech -d financas_db"
           --health-interval 5s
@@ -34,7 +34,7 @@ jobs:
             -v ${{ github.workspace }}/migrations:/flyway/sql \
             -e FLYWAY_URL=jdbc:postgresql://localhost:5432/financas_db \
             -e FLYWAY_USER=fintech \
-            -e FLYWAY_PASSWORD=Fin407 \
+            -e FLYWAY_PASSWORD=${{ secrets.DB_PASS }} \
             flyway/flyway:10-alpine migrate
 
       - uses: actions/setup-python@v5
@@ -44,13 +44,18 @@ jobs:
       - name: Instalar dependências
         run: pip install -r requirements.txt
 
+      - name: Lint (ruff)
+        run: ruff check app.py test_app.py
+
       - name: Executar testes
         env:
           DB_HOST: localhost
           DB_PORT: 5432
           DB_NAME: financas_db
           DB_USER: fintech
-          DB_PASS: Fin407
+          DB_PASS: ${{ secrets.DB_PASS }}
+          SMTP_USUARIO: ${{ secrets.SMTP_USUARIO }}
+          SMTP_SENHA: ${{ secrets.SMTP_SENHA }}
         run: |
           pytest test_app.py -v \
             --html=relatorio-testes.html \

@@ -11,7 +11,7 @@ services:
       - "8090:8080"
     environment:
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
-      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-admin123}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD}
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock

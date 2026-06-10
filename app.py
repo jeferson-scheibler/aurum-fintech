@@ -29,17 +29,18 @@ def brl_filter(value):
     return f"R$ {float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME', 'financas_db'),
-    'user':   os.getenv('DB_USER', 'fintech'),
-    'password': os.getenv('DB_PASS', 'Fin407'),
+    'dbname': os.getenv('DB_NAME'),
+    'user':   os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASS'),
     'host':   os.getenv('DB_HOST', 'localhost'),
-    'port':   int(os.getenv('DB_PORT', 5432)),
+    'port':   int(os.getenv('DB_PORT', '5432')),
 }
 
 SMTP_HOST    = os.getenv('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT    = int(os.getenv('SMTP_PORT', 587))
-SMTP_USUARIO = os.getenv('SMTP_USUARIO', '')
-SMTP_SENHA   = os.getenv('SMTP_SENHA', '')
+SMTP_PORT    = int(os.getenv('SMTP_PORT', '587'))
+SMTP_USUARIO = os.getenv('SMTP_USUARIO')
+SMTP_SENHA   = os.getenv('SMTP_SENHA')
+APP_ENV      = os.getenv('APP_ENV', 'producao')
 
 
 def get_conn():
@@ -57,8 +58,12 @@ def login_required(f):
 
 
 def _email_html(acao, campos):
-    cor_acao   = '#4caf7d' if acao == 'criado' else '#C9A84C'
-    label_acao = 'Novo Lançamento' if acao == 'criado' else 'Lançamento Atualizado'
+    if acao == 'criado':
+        cor_acao, label_acao = '#4caf7d', 'Novo Lançamento'
+    elif acao == 'excluido':
+        cor_acao, label_acao = '#c97a7a', 'Lançamento Excluído'
+    else:
+        cor_acao, label_acao = '#C9A84C', 'Lançamento Atualizado'
     tipo       = campos.get('tipo_lancamento', '')
     cor_tipo   = '#4caf7d' if tipo == 'receita' else '#c97a7a'
     valor_fmt  = f"R$ {float(campos.get('valor', 0)):,.2f}".replace(',','X').replace('.',',').replace('X','.')
@@ -82,6 +87,13 @@ def _email_html(acao, campos):
         + row('Situação',  campos.get('situacao', '').capitalize())
     )
 
+    banner_homolog = (
+        '<tr><td style="background:#7a5c00;padding:10px 36px;font-size:10px;letter-spacing:.18em;'
+        'text-transform:uppercase;color:#ffe082;text-align:center;">'
+        '&#9888; AMBIENTE DE HOMOLOGA&Ccedil;&Atilde;O &mdash; este e-mail n&atilde;o &eacute; real'
+        '</td></tr>'
+    ) if APP_ENV != 'producao' else ''
+
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"/></head>
@@ -91,6 +103,7 @@ def _email_html(acao, campos):
 <table width="540" cellpadding="0" cellspacing="0"
        style="background:#111116;border:1px solid #2a2820;max-width:540px;width:100%;">
 
+  {banner_homolog}
   <tr><td style="height:2px;background:linear-gradient(90deg,transparent,#C9A84C,transparent);font-size:0;">&nbsp;</td></tr>
 
   <tr>
@@ -138,8 +151,9 @@ def enviar_email(assunto, campos, acao, email_destinatario):
         app.logger.warning('E-mail não configurado.')
         return
     try:
+        prefixo = '[HOMOLOG] ' if APP_ENV != 'producao' else ''
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = assunto
+        msg['Subject'] = f'{prefixo}{assunto}'
         msg['From']    = SMTP_USUARIO
         msg['To']      = email_destinatario
         msg.attach(MIMEText(_email_html(acao, campos), 'html', 'utf-8'))
@@ -169,7 +183,8 @@ def login():
                 (login_input,)
             )
             usuario = cur.fetchone()
-            cur.close(); conn.close()
+            cur.close()
+            conn.close()
             if usuario and check_password_hash(usuario['senha'], senha_input):
                 session['usuario_id']    = usuario['id']
                 session['usuario_nome']  = usuario['nome']
@@ -204,7 +219,8 @@ def perfil():
                 (email, session['usuario_id'])
             )
             conn.commit()
-            cur.close(); conn.close()
+            cur.close()
+            conn.close()
             session['usuario_email'] = email
             ok = 'E-mail atualizado com sucesso.'
         except Exception as e:
@@ -232,18 +248,23 @@ def lancamentos():
 
         query, params = "SELECT * FROM lancamento WHERE 1=1", []
         if filtro_tipo:
-            query += " AND tipo_lancamento = %s"; params.append(filtro_tipo)
+            query += " AND tipo_lancamento = %s"
+            params.append(filtro_tipo)
         if filtro_situacao:
-            query += " AND situacao = %s";        params.append(filtro_situacao)
+            query += " AND situacao = %s"
+            params.append(filtro_situacao)
         if filtro_data_ini:
-            query += " AND data_lancamento >= %s"; params.append(filtro_data_ini)
+            query += " AND data_lancamento >= %s"
+            params.append(filtro_data_ini)
         if filtro_data_fim:
-            query += " AND data_lancamento <= %s"; params.append(filtro_data_fim)
+            query += " AND data_lancamento <= %s"
+            params.append(filtro_data_fim)
         query += " ORDER BY data_lancamento DESC"
 
         cur.execute(query, params)
         registros = cur.fetchall()
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
 
         ativos         = [r for r in registros if r['situacao'] == 'ativo']
         total_receitas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'receita')
@@ -294,7 +315,8 @@ def novo_lancamento():
                 )
                 novo_id = cur.fetchone()[0]
                 conn.commit()
-                cur.close(); conn.close()
+                cur.close()
+                conn.close()
 
                 flash('Lançamento criado com sucesso.', 'ok')
                 enviar_email(
@@ -341,7 +363,8 @@ def editar_lancamento(id):
                     (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, id)
                 )
                 conn.commit()
-                cur.close(); conn.close()
+                cur.close()
+                conn.close()
 
                 flash('Lançamento atualizado.', 'ok')
                 enviar_email(
@@ -357,7 +380,8 @@ def editar_lancamento(id):
 
     cur.execute("SELECT * FROM lancamento WHERE id = %s", (id,))
     lancamento = cur.fetchone()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
 
     if not lancamento:
         return redirect(url_for('lancamentos'))
@@ -373,11 +397,25 @@ def editar_lancamento(id):
 def excluir_lancamento(id):
     try:
         conn = get_conn()
-        cur  = conn.cursor()
+        cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM lancamento WHERE id = %s", (id,))
+        lancamento = cur.fetchone()
         cur.execute("DELETE FROM lancamento WHERE id = %s", (id,))
         conn.commit()
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
         flash('Lançamento excluído.', 'ok')
+        if lancamento:
+            enviar_email(
+                assunto=f'[Aurum] Lançamento excluído — {lancamento["descricao"]}',
+                campos=dict(id=id, descricao=lancamento['descricao'],
+                            data_lancamento=lancamento['data_lancamento'],
+                            valor=lancamento['valor'],
+                            tipo_lancamento=lancamento['tipo_lancamento'],
+                            situacao=lancamento['situacao'], observacao=lancamento.get('observacao', '')),
+                acao='excluido',
+                email_destinatario=session.get('usuario_email', ''),
+            )
     except Exception as e:
         flash(f'Erro ao excluir: {e}', 'erro')
     return redirect(url_for('lancamentos'))
@@ -397,17 +435,22 @@ def exportar_pdf():
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     query, params = "SELECT * FROM lancamento WHERE 1=1", []
     if filtro_tipo:
-        query += " AND tipo_lancamento = %s"; params.append(filtro_tipo)
+        query += " AND tipo_lancamento = %s"
+        params.append(filtro_tipo)
     if filtro_situacao:
-        query += " AND situacao = %s";        params.append(filtro_situacao)
+        query += " AND situacao = %s"
+        params.append(filtro_situacao)
     if filtro_data_ini:
-        query += " AND data_lancamento >= %s"; params.append(filtro_data_ini)
+        query += " AND data_lancamento >= %s"
+        params.append(filtro_data_ini)
     if filtro_data_fim:
-        query += " AND data_lancamento <= %s"; params.append(filtro_data_fim)
+        query += " AND data_lancamento <= %s"
+        params.append(filtro_data_fim)
     query += " ORDER BY data_lancamento DESC"
     cur.execute(query, params)
     registros = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
 
     ativos         = [r for r in registros if r['situacao'] == 'ativo']
     total_receitas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'receita')

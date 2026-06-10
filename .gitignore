@@ -3,6 +3,7 @@
 .env.local
 *.pem
 *.key
+setup-aurum-local.sh
 
 # Logs
 app.log

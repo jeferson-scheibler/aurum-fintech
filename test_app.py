@@ -118,7 +118,8 @@ def test_criar_com_observacao(logged_client):
     cur  = conn.cursor()
     cur.execute("SELECT observacao FROM lancamento WHERE descricao = '[TEST] Freelance com obs'")
     row = cur.fetchone()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     assert row is not None and row[0] == 'Projeto site cliente X'
 
 
@@ -135,7 +136,8 @@ def test_criar_inativo(logged_client):
     cur  = conn.cursor()
     cur.execute("SELECT situacao FROM lancamento WHERE descricao = '[TEST] Lançamento suspenso'")
     row = cur.fetchone()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     assert row is not None and row[0] == 'inativo'
 
 
@@ -167,7 +169,9 @@ def test_editar_lancamento(logged_client):
         " VALUES ('[TEST] Original', '2026-03-01', 100, 'receita', 'ativo') RETURNING id"
     )
     lid = cur.fetchone()[0]
-    conn.commit(); cur.close(); conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
 
     resp = logged_client.post(f'/lancamentos/editar/{lid}', data={
         'descricao':       '[TEST] Editado',
@@ -182,7 +186,8 @@ def test_editar_lancamento(logged_client):
     cur  = conn.cursor()
     cur.execute("SELECT descricao FROM lancamento WHERE id = %s", (lid,))
     assert cur.fetchone()[0] == '[TEST] Editado'
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
 
 
 def test_editar_inexistente(logged_client):
@@ -198,7 +203,9 @@ def test_excluir_lancamento(logged_client):
         " VALUES ('[TEST] Para excluir', '2026-03-10', 10, 'despesa', 'ativo') RETURNING id"
     )
     lid = cur.fetchone()[0]
-    conn.commit(); cur.close(); conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
 
     logged_client.post(f'/lancamentos/excluir/{lid}', follow_redirects=True)
 
@@ -206,7 +213,8 @@ def test_excluir_lancamento(logged_client):
     cur  = conn.cursor()
     cur.execute("SELECT id FROM lancamento WHERE id = %s", (lid,))
     assert cur.fetchone() is None
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
 
 
 # filtros
@@ -231,7 +239,9 @@ def test_filtro_situacao_inativo(logged_client):
         "INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao)"
         " VALUES ('[TEST] Inativo filtro', '2026-04-01', 30, 'despesa', 'inativo')"
     )
-    conn.commit(); cur.close(); conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
 
     resp = logged_client.get('/lancamentos?situacao=inativo')
     assert resp.status_code == 200
@@ -245,7 +255,9 @@ def test_filtro_data(logged_client):
         "INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao)"
         " VALUES ('[TEST] Julho especifico', '2026-07-20', 999, 'receita', 'ativo')"
     )
-    conn.commit(); cur.close(); conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
 
     resp = logged_client.get('/lancamentos?data_ini=2026-07-01&data_fim=2026-07-31')
     assert resp.status_code == 200

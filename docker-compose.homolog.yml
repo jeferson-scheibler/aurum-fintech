@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB:       financas_db
       POSTGRES_USER:     fintech
-      POSTGRES_PASSWORD: ${DB_PASS:-Fin407}
+      POSTGRES_PASSWORD: ${DB_PASS}
     volumes:
       - aurum_db_homolog:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     environment:
       FLYWAY_URL:      jdbc:postgresql://db:5432/financas_db
       FLYWAY_USER:     fintech
-      FLYWAY_PASSWORD: ${DB_PASS:-Fin407}
+      FLYWAY_PASSWORD: ${DB_PASS}
       FLYWAY_LOCATIONS: filesystem:/flyway/sql
     volumes:
       - ./migrations:/flyway/sql
@@ -40,9 +40,10 @@ services:
       DB_PORT: 5432
       DB_NAME: financas_db
       DB_USER: fintech
-      DB_PASS: ${DB_PASS:-Fin407}
-      SECRET_KEY: ${SECRET_KEY:-}
+      DB_PASS: ${DB_PASS}
+      SECRET_KEY: ${SECRET_KEY}
       FLASK_DEBUG: "0"
+      APP_ENV: "homolog"
     depends_on:
       flyway:
         condition: service_completed_successfully
