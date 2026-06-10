@@ -167,6 +167,50 @@ def enviar_email(assunto, campos, acao, email_destinatario):
         app.logger.warning(f'Falha ao enviar e-mail: {e}')
 
 
+# ── LANÇAMENTOS: helpers compartilhados ─────────────────────────────────────────
+
+def _ler_filtros():
+    return {
+        'tipo':     request.args.get('tipo', ''),
+        'situacao': request.args.get('situacao', ''),
+        'data_ini': request.args.get('data_ini', ''),
+        'data_fim': request.args.get('data_fim', ''),
+    }
+
+
+def _buscar_lancamentos(filtros):
+    conn = get_conn()
+    cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    query, params = "SELECT * FROM lancamento WHERE 1=1", []
+    if filtros['tipo']:
+        query += " AND tipo_lancamento = %s"
+        params.append(filtros['tipo'])
+    if filtros['situacao']:
+        query += " AND situacao = %s"
+        params.append(filtros['situacao'])
+    if filtros['data_ini']:
+        query += " AND data_lancamento >= %s"
+        params.append(filtros['data_ini'])
+    if filtros['data_fim']:
+        query += " AND data_lancamento <= %s"
+        params.append(filtros['data_fim'])
+    query += " ORDER BY data_lancamento DESC"
+
+    cur.execute(query, params)
+    registros = cur.fetchall()
+    cur.close()
+    conn.close()
+    return registros
+
+
+def _calcular_totais(registros):
+    ativos         = [r for r in registros if r['situacao'] == 'ativo']
+    total_receitas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'receita')
+    total_despesas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'despesa')
+    return total_receitas, total_despesas, total_receitas - total_despesas
+
+
 # ── LOGIN ──────────────────────────────────────────────────────────────────────
 
 @app.route('/', methods=['GET', 'POST'])
@@ -237,39 +281,11 @@ def perfil():
 @app.route('/lancamentos')
 @login_required
 def lancamentos():
-    filtro_tipo     = request.args.get('tipo', '')
-    filtro_situacao = request.args.get('situacao', '')
-    filtro_data_ini = request.args.get('data_ini', '')
-    filtro_data_fim = request.args.get('data_fim', '')
+    filtros = _ler_filtros()
 
     try:
-        conn = get_conn()
-        cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-        query, params = "SELECT * FROM lancamento WHERE 1=1", []
-        if filtro_tipo:
-            query += " AND tipo_lancamento = %s"
-            params.append(filtro_tipo)
-        if filtro_situacao:
-            query += " AND situacao = %s"
-            params.append(filtro_situacao)
-        if filtro_data_ini:
-            query += " AND data_lancamento >= %s"
-            params.append(filtro_data_ini)
-        if filtro_data_fim:
-            query += " AND data_lancamento <= %s"
-            params.append(filtro_data_fim)
-        query += " ORDER BY data_lancamento DESC"
-
-        cur.execute(query, params)
-        registros = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        ativos         = [r for r in registros if r['situacao'] == 'ativo']
-        total_receitas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'receita')
-        total_despesas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'despesa')
-        saldo          = total_receitas - total_despesas
+        registros = _buscar_lancamentos(filtros)
+        total_receitas, total_despesas, saldo = _calcular_totais(registros)
     except Exception:
         registros = []
         total_receitas = total_despesas = saldo = 0
@@ -281,10 +297,10 @@ def lancamentos():
         total_despesas=total_despesas,
         saldo=saldo,
         usuario_nome=session.get('usuario_nome'),
-        filtro_tipo=filtro_tipo,
-        filtro_situacao=filtro_situacao,
-        filtro_data_ini=filtro_data_ini,
-        filtro_data_fim=filtro_data_fim,
+        filtro_tipo=filtros['tipo'],
+        filtro_situacao=filtros['situacao'],
+        filtro_data_ini=filtros['data_ini'],
+        filtro_data_fim=filtros['data_fim'],
     )
 
 
@@ -426,36 +442,9 @@ def excluir_lancamento(id):
 @app.route('/lancamentos/exportar-pdf')
 @login_required
 def exportar_pdf():
-    filtro_tipo     = request.args.get('tipo', '')
-    filtro_situacao = request.args.get('situacao', '')
-    filtro_data_ini = request.args.get('data_ini', '')
-    filtro_data_fim = request.args.get('data_fim', '')
-
-    conn = get_conn()
-    cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    query, params = "SELECT * FROM lancamento WHERE 1=1", []
-    if filtro_tipo:
-        query += " AND tipo_lancamento = %s"
-        params.append(filtro_tipo)
-    if filtro_situacao:
-        query += " AND situacao = %s"
-        params.append(filtro_situacao)
-    if filtro_data_ini:
-        query += " AND data_lancamento >= %s"
-        params.append(filtro_data_ini)
-    if filtro_data_fim:
-        query += " AND data_lancamento <= %s"
-        params.append(filtro_data_fim)
-    query += " ORDER BY data_lancamento DESC"
-    cur.execute(query, params)
-    registros = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    ativos         = [r for r in registros if r['situacao'] == 'ativo']
-    total_receitas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'receita')
-    total_despesas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'despesa')
-    saldo          = total_receitas - total_despesas
+    filtros   = _ler_filtros()
+    registros = _buscar_lancamentos(filtros)
+    total_receitas, total_despesas, saldo = _calcular_totais(registros)
 
     GOLD    = colors.HexColor('#C9A84C')
     DARK    = colors.HexColor('#0B0B0E')
