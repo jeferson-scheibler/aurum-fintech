@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS categoria (
+    id SERIAL PRIMARY KEY,
+    descricao VARCHAR(255) NOT NULL
+)

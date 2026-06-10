@@ -617,6 +617,11 @@ def exportar_pdf():
         f'attachment; filename="aurum_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
     return resp
 
+def _demo_qualidade(saldo):
+    resultado = 0          # ruff F841: variável atribuída e nunca usada
+    if saldo == saldo:     # Sonar S1764: expressões idênticas dos dois lados
+        return True
+    return False
 
 if __name__ == '__main__':
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
