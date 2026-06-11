@@ -232,7 +232,11 @@ def login():
             if usuario and check_password_hash(usuario['senha'], senha_input):
                 session['usuario_id']    = usuario['id']
                 session['usuario_nome']  = usuario['nome']
-                session['usuario_email'] = usuario['email'] or ''
+                email_usuario = usuario['email'] or ''
+                # Admin sem e-mail cadastrado usa a própria conta SMTP (secrets) como destinatário
+                if not email_usuario and usuario['login'] == 'admin':
+                    email_usuario = SMTP_USUARIO or ''
+                session['usuario_email'] = email_usuario
                 return redirect(url_for('lancamentos'))
             erro = 'Login ou senha inválidos.'
         except Exception as e:
