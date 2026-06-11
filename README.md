@@ -11,8 +11,6 @@
 ![Ruff](https://img.shields.io/badge/Ruff-linter-261230?logo=ruff&logoColor=white)
 ![SonarCloud](https://img.shields.io/badge/SonarCloud-Quality_Gate-F3702A?logo=sonarcloud&logoColor=white)
 
-[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-highlight.svg)](https://sonarcloud.io/summary/new_code?id=aurum-fintech)
-
 Aplicação web para controle de receitas e despesas, desenvolvida como projeto prático da disciplina **Gerência de Configuração de Software (4815207)** — Univates 2026/A.
 
 ---
