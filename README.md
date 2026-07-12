@@ -1,4 +1,4 @@
-# Aurum Fintech
+# Bagual
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1-000000?logo=flask&logoColor=white)
@@ -11,7 +11,9 @@
 ![Ruff](https://img.shields.io/badge/Ruff-linter-261230?logo=ruff&logoColor=white)
 ![SonarCloud](https://img.shields.io/badge/SonarCloud-Quality_Gate-F3702A?logo=sonarcloud&logoColor=white)
 
-Aplicação web para controle de receitas e despesas, desenvolvida como projeto prático da disciplina **Gerência de Configuração de Software (4815207)** — Univates 2026/A.
+**Bagual** — Força. Velocidade. Liberdade. Aplicação web para controle de receitas e despesas, desenvolvida como projeto prático da disciplina **Gerência de Configuração de Software (4815207)** — Univates 2026/A.
+
+> O nome interno do repositório e da infraestrutura de deploy (containers, job do Jenkins, projeto no SonarCloud) permanece `aurum-fintech` para não quebrar o pipeline já configurado na VM.
 
 ---
 

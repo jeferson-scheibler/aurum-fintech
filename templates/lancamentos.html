@@ -3,284 +3,288 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Aurum Fintech — Lançamentos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <meta name="theme-color" content="#00FF4E"/>
+  <title>Bagual · Lançamentos</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --gold:      #C9A84C;
-      --gold-dim:  #7a6228;
-      --bg:        #0B0B0E;
-      --surface:   #111116;
-      --surface2:  #16161c;
-      --border:    #2a2820;
-      --text:      #E8E2D0;
-      --muted:     #6b6550;
-      --green:     #4caf7d;
-      --green-bg:  rgba(76,175,125,0.08);
-      --red:       #c97a7a;
-      --red-bg:    rgba(201,122,122,0.08);
+      --brand:     #00FF4E;
+      --brand-dim: #0f8a34;
+      --brand-glow:rgba(0,255,78,.4);
+      --bg:        #060606;
+      --surface:   #141414;
+      --surface2:  #1c1c1c;
+      --border:    #2a2a2a;
+      --text:      #f2f2ec;
+      --muted:     #8a8a85;
+      --green:     #38e08f;
+      --green-bg:  rgba(56,224,143,0.10);
+      --red:       #ff5c5c;
+      --red-bg:    rgba(255,92,92,0.10);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: var(--bg); min-height: 100vh;
       font-family: 'DM Mono', monospace; color: var(--text);
+      position: relative; overflow-x: hidden;
+      padding-bottom: 96px;
     }
     body::before {
       content: ''; position: fixed; inset: 0;
       background-image:
         linear-gradient(var(--border) 1px, transparent 1px),
         linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px; opacity: 0.25;
+      background-size: 60px 60px; opacity: 0.16;
+      mask-image: radial-gradient(circle at 90% 0%, black, transparent 55%);
       pointer-events: none; z-index: 0;
     }
 
+    /* ── nav ── */
     nav {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(11,11,14,0.92); backdrop-filter: blur(12px);
+      background: rgba(6,6,6,0.92); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 40px; height: 60px;
+      padding: 0 16px; height: 58px;
     }
-    .nav-brand { display: flex; align-items: baseline; gap: 10px; }
-    .nav-symbol { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--gold); font-weight: 300; }
-    .nav-name   { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: 0.2em; text-transform: uppercase; }
-    .nav-right  { display: flex; align-items: center; gap: 20px; }
-    .nav-user   { font-size: 11px; color: var(--muted); }
-    .nav-user span { color: var(--gold); }
-    .btn-logout {
-      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    nav::after {
+      content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%;
+      background: linear-gradient(90deg, var(--brand) 0%, transparent 35%); opacity: .7;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-symbol { width: 28px; height: 28px; }
+    .nav-name   { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; text-transform: lowercase; }
+    .nav-right  { display: flex; align-items: center; gap: 8px; }
+    .btn-nav, .btn-logout {
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
       color: var(--muted); text-decoration: none;
-      border: 1px solid var(--border); padding: 6px 14px;
+      border: 1px solid var(--border); padding: 7px 13px;
+      clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
       transition: color .2s, border-color .2s;
     }
+    .btn-nav:hover { color: var(--brand); border-color: var(--brand-dim); }
     .btn-logout:hover { color: var(--red); border-color: var(--red); }
-    .btn-nav {
-      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-      color: var(--muted); text-decoration: none;
-      border: 1px solid var(--border); padding: 6px 14px;
-      transition: color .2s, border-color .2s;
-    }
-    .btn-nav:hover { color: var(--gold); border-color: var(--gold-dim); }
 
-    main {
-      position: relative; z-index: 1;
-      max-width: 1150px; margin: 0 auto;
-      padding: 40px 24px 60px;
-    }
+    main { position: relative; z-index: 1; max-width: 620px; margin: 0 auto; padding: 20px 14px 40px; }
 
     /* ── flash ── */
-    .flash-wrap { position: relative; margin-bottom: 20px; }
+    .flash-wrap { position: relative; margin-bottom: 16px; }
     .flash {
       display: flex; align-items: center; justify-content: space-between;
-      font-size: 11px; letter-spacing: 0.08em;
-      padding: 10px 14px; border: 1px solid;
-      animation: slideDown .35s ease both;
-      transition: opacity .4s, transform .4s;
+      font-size: 11px; letter-spacing: 0.05em;
+      padding: 12px 14px; border-left: 3px solid;
+      animation: slideDown .35s ease both; transition: opacity .4s, transform .4s;
     }
     .flash.hide { opacity: 0; transform: translateY(-6px); pointer-events: none; }
-    .flash.ok   { background: var(--green-bg); color: var(--green); border-color: rgba(76,175,125,.25); }
-    .flash.erro { background: var(--red-bg);   color: var(--red);   border-color: rgba(201,122,122,.25); }
-    .flash-close {
-      background: none; border: none; color: inherit; cursor: pointer;
-      font-size: 14px; line-height: 1; opacity: .6; padding: 0 2px; margin-left: 12px;
-    }
+    .flash.ok   { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+    .flash.erro { background: var(--red-bg);   color: var(--red);   border-color: var(--red); }
+    .flash-close { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; opacity: .6; margin-left: 12px; }
     .flash-close:hover { opacity: 1; }
-    /* barra de progresso */
-    .flash-progress {
-      position: absolute; bottom: 0; left: 0; height: 2px;
-      animation: shrink 4s linear forwards;
-    }
-    .flash.ok   .flash-progress { background: var(--green); }
+    .flash-progress { position: absolute; bottom: 0; left: 0; height: 2px; animation: shrink 4s linear forwards; }
+    .flash.ok .flash-progress { background: var(--green); }
     .flash.erro .flash-progress { background: var(--red); }
-    @keyframes shrink {
-      from { width: 100%; }
-      to   { width: 0; }
-    }
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes shrink { from { width: 100%; } to { width: 0; } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-    .page-header {
-      display: flex; align-items: flex-end; justify-content: space-between;
-      margin-bottom: 26px;
+    /* ── balance hero ── */
+    .hero {
+      position: relative;
+      background:
+        radial-gradient(120% 120% at 100% 0%, rgba(0,255,78,.06), transparent 55%),
+        var(--surface);
+      border: 1px solid var(--border);
+      padding: 22px 22px 20px;
+      margin-bottom: 18px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      overflow: hidden;
     }
-    .page-header h1 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; }
-    .page-header p  { font-size: 11px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px; }
-    .header-actions { display: flex; gap: 10px; }
-
-    .btn-novo {
-      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-      text-decoration: none; padding: 10px 20px;
-      border: 1px solid var(--gold); color: var(--gold);
-      transition: background .2s, color .2s;
+    .hero::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--brand), transparent 60%); box-shadow: 0 0 14px var(--brand-glow); }
+    .hero-label { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .hero-label::before { content: ''; width: 16px; height: 1px; background: var(--brand); }
+    .hero-saldo {
+      font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: clamp(42px, 13vw, 60px);
+      line-height: 1.0; letter-spacing: -0.02em;
+      margin: 12px 0 18px; word-break: break-word;
     }
-    .btn-novo:hover { background: var(--gold); color: var(--bg); }
+    .hero.pos .hero-saldo { color: var(--brand); text-shadow: 0 0 30px var(--brand-glow); }
+    .hero.neg .hero-saldo { color: var(--red); text-shadow: 0 0 26px rgba(255,92,92,.35); }
+    .hero-split { display: flex; gap: 10px; }
+    .hero-chip {
+      flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+      background: var(--bg); border: 1px solid var(--border); padding: 10px 12px;
+    }
+    .hero-chip .ico { width: 22px; height: 22px; flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+    .hero-chip.up   .ico { color: var(--green); background: var(--green-bg); }
+    .hero-chip.down .ico { color: var(--red);   background: var(--red-bg); }
+    .hero-chip .txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .hero-chip .k { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    .hero-chip .v { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hero-chip.up .v   { color: var(--green); }
+    .hero-chip.down .v { color: var(--red); }
 
-    .btn-pdf {
-      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-      text-decoration: none; padding: 10px 18px;
-      border: 1px solid var(--border); color: var(--muted);
+    /* ── toolbar: pills + actions ── */
+    .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .pills { display: flex; gap: 6px; flex: 1; min-width: 0; }
+    .pill {
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      text-decoration: none; padding: 9px 14px; white-space: nowrap;
+      border: 1px solid var(--border); color: var(--muted); background: var(--surface);
+      clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    .pill:hover { color: var(--text); }
+    .pill.active { background: var(--brand); color: #06120a; border-color: var(--brand); font-weight: 600; }
+    .tool-btn {
+      display: grid; place-items: center; width: 40px; height: 38px; flex: none;
+      border: 1px solid var(--border); color: var(--muted); background: var(--surface);
+      cursor: pointer; text-decoration: none; position: relative;
       transition: color .2s, border-color .2s;
     }
-    .btn-pdf:hover { border-color: var(--gold-dim); color: var(--gold); }
-
-    /* ── filtros ── */
-    .filter-bar {
-      background: var(--surface); border: 1px solid var(--border);
-      padding: 16px 20px; margin-bottom: 22px;
+    .tool-btn:hover { color: var(--brand); border-color: var(--brand-dim); }
+    .tool-btn svg { width: 17px; height: 17px; }
+    .tool-btn .badge {
+      position: absolute; top: -6px; right: -6px; min-width: 15px; height: 15px;
+      background: var(--brand); color: #06120a; font-size: 9px; font-weight: 700;
+      display: grid; place-items: center; border-radius: 8px; padding: 0 4px;
     }
-    .filter-bar form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-    .fg { display: flex; flex-direction: column; gap: 5px; min-width: 128px; }
+
+    /* ── filter drawer ── */
+    .drawer { max-height: 0; overflow: hidden; transition: max-height .3s ease; margin-bottom: 0; }
+    .drawer.open { max-height: 340px; margin-bottom: 16px; }
+    .drawer-inner { background: var(--surface); border: 1px solid var(--border); padding: 16px; }
+    .drawer form { display: grid; gap: 12px; }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
     .fg label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
     .fg select, .fg input[type="date"] {
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px;
-      padding: 8px 10px; outline: none; transition: border-color .2s;
-      appearance: none;
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-left: 2px solid var(--border);
+      color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      padding: 10px; outline: none; transition: border-color .2s; appearance: none;
     }
-    .fg select:focus, .fg input:focus { border-color: var(--gold-dim); }
-    .filter-actions { display: flex; gap: 8px; align-items: flex-end; margin-left: auto; }
-    .btn-filtrar {
-      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
-      padding: 9px 16px; cursor: pointer; font-family: 'DM Mono', monospace;
-      border: 1px solid var(--gold); color: var(--gold); background: transparent;
-      transition: background .2s, color .2s;
+    .fg select:focus, .fg input:focus { border-left-color: var(--brand); }
+    .drawer-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .drawer-actions { display: flex; gap: 8px; margin-top: 2px; }
+    .btn-apply {
+      flex: 1; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 12px; cursor: pointer; font-family: 'DM Mono', monospace;
+      border: none; color: #06120a; background: var(--brand);
+      clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 100%, 9px 100%);
     }
-    .btn-filtrar:hover { background: var(--gold); color: var(--bg); }
-    .btn-limpar {
-      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
-      padding: 9px 14px; text-decoration: none; font-family: 'DM Mono', monospace;
-      border: 1px solid var(--border); color: var(--muted); background: transparent;
-      transition: border-color .2s, color .2s;
+    .btn-clear {
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 12px 16px; text-decoration: none; font-family: 'DM Mono', monospace;
+      border: 1px solid var(--border); color: var(--muted); text-align: center;
     }
-    .btn-limpar:hover { border-color: var(--muted); color: var(--text); }
+    .btn-clear:hover { border-color: var(--muted); color: var(--text); }
 
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-    .chip {
-      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
-      padding: 3px 10px; background: rgba(201,168,76,.07);
-      border: 1px solid rgba(201,168,76,.2); color: var(--gold-dim);
+    /* ── ledger ── */
+    .ledger-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin: 4px 2px 12px;
     }
+    .ledger-head .t { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+    .ledger-head .c { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--brand); }
 
-    /* ── cards ── */
-    .summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 26px; }
-    .scard {
+    .feed { display: flex; flex-direction: column; gap: 8px; }
+
+    .tx {
+      position: relative;
+      display: grid; grid-template-columns: 38px 1fr auto;
+      align-items: center; gap: 12px;
       background: var(--surface); border: 1px solid var(--border);
-      padding: 20px 22px 16px; position: relative; overflow: hidden;
+      border-left: 3px solid var(--tx-accent, var(--border));
+      padding: 13px 14px 13px 12px;
+      animation: txIn .4s ease both;
     }
-    .scard::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
-    .scard.receita::after { background: linear-gradient(90deg,transparent,var(--green),transparent); }
-    .scard.despesa::after { background: linear-gradient(90deg,transparent,var(--red),transparent); }
-    .scard.saldo::after   { background: linear-gradient(90deg,transparent,var(--gold),transparent); }
-    .scard-label { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .scard-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; }
-    .scard.receita .scard-value { color: var(--green); }
-    .scard.despesa .scard-value { color: var(--red); }
-    .scard.saldo     .scard-value { color: var(--gold); }
-    .scard.saldo-neg::after      { background: linear-gradient(90deg,transparent,var(--red),transparent); }
-    .scard.saldo-neg .scard-value { color: var(--red); }
-    .scard-prefix  { font-size: 13px; margin-right: 2px; opacity: .6; }
+    .tx.receita { --tx-accent: var(--green); }
+    .tx.despesa { --tx-accent: var(--red); }
+    .tx.inativo { opacity: .5; }
+    @keyframes txIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* ── tabela ── */
-    .table-wrap { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; }
-    .table-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 22px; border-bottom: 1px solid var(--border);
+    .tx-ico {
+      width: 38px; height: 38px; display: grid; place-items: center; flex: none;
+      font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700;
     }
-    .table-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
-    .table-count { font-size: 11px; color: var(--gold-dim); }
+    .tx.receita .tx-ico { color: var(--green); background: var(--green-bg); }
+    .tx.despesa .tx-ico { color: var(--red);   background: var(--red-bg); }
 
-    table { width: 100%; border-collapse: collapse; }
-    thead th {
-      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-      color: var(--muted); font-weight: 400; padding: 11px 18px;
-      text-align: left; border-bottom: 1px solid var(--border);
+    .tx-body { min-width: 0; }
+    .tx-desc { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-meta { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 0.04em; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .tx-meta .sep { width: 3px; height: 3px; background: var(--muted); border-radius: 50%; opacity: .6; }
+    .tx-inativo-tag { color: var(--muted); border: 1px solid var(--border); padding: 1px 6px; font-size: 8px; letter-spacing: .12em; }
+
+    .tx-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .tx-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; white-space: nowrap; }
+    .tx.receita .tx-valor { color: var(--green); }
+    .tx.despesa .tx-valor { color: var(--red); }
+    .tx-actions { display: flex; gap: 4px; }
+    .tx-act {
+      width: 30px; height: 28px; display: grid; place-items: center;
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      cursor: pointer; text-decoration: none; transition: color .15s, border-color .15s;
     }
-    tbody tr { border-bottom: 1px solid rgba(42,40,32,.5); transition: background .15s; }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--surface2); }
-    tbody td { padding: 12px 18px; font-size: 12px; vertical-align: middle; }
+    .tx-act svg { width: 14px; height: 14px; }
+    .tx-act.edit:hover { color: var(--brand); border-color: var(--brand-dim); }
+    .tx-act.del:hover  { color: var(--red); border-color: var(--red); }
 
-    .td-id   { color: var(--muted); font-size: 11px; width: 40px; }
-    .td-date { color: var(--muted); font-size: 11px; white-space: nowrap; }
-    .td-valor { font-family: 'Cormorant Garamond', serif; font-size: 17px; white-space: nowrap; }
-    .receita-val { color: var(--green); }
-    .despesa-val { color: var(--red); }
-
-    .badge {
-      display: inline-block; font-size: 9px; letter-spacing: 0.15em;
-      text-transform: uppercase; padding: 3px 9px;
+    .empty {
+      text-align: center; padding: 54px 20px;
+      border: 1px dashed var(--border); background: var(--surface);
     }
-    .badge-receita { background: var(--green-bg); color: var(--green); border: 1px solid rgba(76,175,125,.2); }
-    .badge-despesa { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(201,122,122,.2); }
-    .badge-ativo   { background: rgba(201,168,76,.07); color: var(--gold-dim); border: 1px solid rgba(201,168,76,.15); }
-    .badge-inativo { background: rgba(80,80,80,.12);   color: var(--muted);    border: 1px solid rgba(100,100,100,.2); }
+    .empty .em-mark { font-size: 40px; margin-bottom: 14px; filter: grayscale(.2); }
+    .empty .em-t { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 24px; text-transform: lowercase; letter-spacing: -0.01em; margin-bottom: 8px; }
+    .empty .em-s { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
 
-    .td-obs { color: var(--muted); font-size: 11px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .td-actions { white-space: nowrap; }
-    .btn-edit, .btn-del {
-      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
-      padding: 5px 11px; border: 1px solid; cursor: pointer;
-      text-decoration: none; display: inline-block; font-family: 'DM Mono', monospace;
-      transition: background .15s, color .15s;
+    /* ── FAB ── */
+    .fab {
+      position: fixed; z-index: 120; right: 18px; bottom: 22px;
+      display: flex; align-items: center; gap: 10px;
+      background: var(--brand); color: #06120a; text-decoration: none;
+      padding: 15px 20px; font-family: 'DM Mono', monospace; font-weight: 500; font-size: 12px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 100%, 14px 100%);
+      box-shadow: 0 12px 30px -8px var(--brand-glow), 0 0 0 1px rgba(0,0,0,.4);
+      transition: transform .18s cubic-bezier(.34,1.56,.64,1);
     }
-    .btn-edit { color: var(--gold-dim); border-color: var(--border); margin-right: 5px; background: transparent; }
-    .btn-edit:hover { background: var(--gold); color: var(--bg); border-color: var(--gold); }
-    .btn-del  { color: var(--muted);    border-color: var(--border); background: transparent; }
-    .btn-del:hover { background: var(--red); color: var(--bg); border-color: var(--red); }
+    .fab:hover { transform: translateY(-2px); }
+    .fab .plus { font-size: 20px; line-height: 1; }
+    .fab .lbl { display: none; }
 
     /* ── modal ── */
     .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.7); z-index: 200;
-      align-items: center; justify-content: center;
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.78); backdrop-filter: blur(2px);
+      align-items: center; justify-content: center; padding: 20px;
     }
     .modal-overlay.open { display: flex; }
     .modal {
       background: var(--surface); border: 1px solid var(--border);
-      padding: 34px 38px; width: 340px; position: relative;
+      padding: 30px 26px; width: min(360px, 92vw); position: relative;
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      animation: riseIn .3s cubic-bezier(.16,1,.3,1) both;
     }
-    .modal::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg,transparent,var(--red),transparent);
-    }
-    .modal h3 { font-family: 'Cormorant Garamond', serif; font-size: 21px; font-weight: 300; margin-bottom: 10px; }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .modal::before { content: ''; position: absolute; top: 0; left: 0; width: 46%; height: 3px; background: var(--red); box-shadow: 0 0 14px rgba(255,92,92,.4); }
+    .modal h3 { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 24px; text-transform: lowercase; letter-spacing: -0.01em; margin-bottom: 12px; }
     .modal p  { font-size: 11px; color: var(--muted); margin-bottom: 26px; line-height: 1.7; }
     .modal-actions { display: flex; gap: 10px; }
-    .btn-cancel {
-      flex: 1; padding: 10px; font-family: 'DM Mono', monospace; font-size: 10px;
-      letter-spacing: 0.2em; text-transform: uppercase; background: transparent;
-      border: 1px solid var(--border); color: var(--muted); cursor: pointer;
-      transition: border-color .2s, color .2s;
+    .btn-cancel, .btn-confirm-del {
+      flex: 1; padding: 12px; font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase; background: transparent; cursor: pointer;
     }
+    .btn-cancel { border: 1px solid var(--border); color: var(--muted); }
     .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
-    .btn-confirm-del {
-      flex: 1; padding: 10px; font-family: 'DM Mono', monospace; font-size: 10px;
-      letter-spacing: 0.2em; text-transform: uppercase; background: transparent;
-      border: 1px solid var(--red); color: var(--red); cursor: pointer;
-      transition: background .2s, color .2s;
-    }
-    .btn-confirm-del:hover { background: var(--red); color: var(--bg); }
+    .btn-confirm-del { border: 1px solid var(--red); color: var(--red); }
+    .btn-confirm-del:hover { background: var(--red); color: #1a0505; }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    main > * { animation: fadeUp .45s ease both; }
-    main > *:nth-child(2) { animation-delay: .05s; }
-    main > *:nth-child(3) { animation-delay: .1s; }
-    main > *:nth-child(4) { animation-delay: .15s; }
-    main > *:nth-child(5) { animation-delay: .2s; }
-
-    @media (max-width: 700px) {
-      .summary { grid-template-columns: 1fr; }
-      nav { padding: 0 16px; }
-      main { padding: 20px 12px 40px; }
-      .page-header { flex-direction: column; align-items: flex-start; gap: 14px; }
-      .filter-bar form { flex-direction: column; }
-      .filter-actions { margin-left: 0; }
+    @media (min-width: 620px) {
+      nav { padding: 0 28px; }
+      main { padding: 28px 20px 40px; }
+      .fab .lbl { display: inline; }
+      .fab { padding: 15px 24px; }
     }
   </style>
 </head>
@@ -288,11 +292,10 @@
 
 <nav>
   <div class="nav-brand">
-    <span class="nav-symbol">₳</span>
-    <span class="nav-name">Aurum</span>
+    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bagual"/>
+    <span class="nav-name">Bagual</span>
   </div>
   <div class="nav-right">
-    <span class="nav-user">Olá, <span>{{ usuario_nome }}</span></span>
     <a href="/perfil" class="btn-nav">Perfil</a>
     <a href="/logout" class="btn-logout">Sair</a>
   </div>
@@ -312,120 +315,118 @@
     {% endfor %}
   {% endwith %}
 
-  <div class="page-header">
-    <div>
-      <h1>Lanzamentos</h1>
-      <p>Extrato financeiro · Receitas e Despesas</p>
-    </div>
-    <div class="header-actions">
-      <a href="/lancamentos/exportar-pdf?tipo={{ filtro_tipo }}&situacao={{ filtro_situacao }}&data_ini={{ filtro_data_ini }}&data_fim={{ filtro_data_fim }}"
-         class="btn-pdf">⬇ Exportar PDF</a>
-      <a href="/lancamentos/novo" class="btn-novo">+ Novo Lançamento</a>
+  <!-- SALDO HERO -->
+  <div class="hero {{ 'neg' if saldo < 0 else 'pos' }}">
+    <div class="hero-label">Saldo atual</div>
+    <div class="hero-saldo">{{ saldo | brl }}</div>
+    <div class="hero-split">
+      <div class="hero-chip up">
+        <span class="ico">↑</span>
+        <span class="txt"><span class="k">Receitas</span><span class="v">{{ total_receitas | brl }}</span></span>
+      </div>
+      <div class="hero-chip down">
+        <span class="ico">↓</span>
+        <span class="txt"><span class="k">Despesas</span><span class="v">{{ total_despesas | brl }}</span></span>
+      </div>
     </div>
   </div>
 
-  <div class="filter-bar">
-    <form method="GET" action="/lancamentos">
-      <div class="fg">
-        <label>Tipo</label>
-        <select name="tipo">
-          <option value="">Todos</option>
-          <option value="receita" {% if filtro_tipo == 'receita' %}selected{% endif %}>Receita</option>
-          <option value="despesa" {% if filtro_tipo == 'despesa' %}selected{% endif %}>Despesa</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>Situação</label>
-        <select name="situacao">
-          <option value="">Todas</option>
-          <option value="ativo"   {% if filtro_situacao == 'ativo'   %}selected{% endif %}>Ativo</option>
-          <option value="inativo" {% if filtro_situacao == 'inativo' %}selected{% endif %}>Inativo</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>De</label>
-        <input type="date" name="data_ini" value="{{ filtro_data_ini }}"/>
-      </div>
-      <div class="fg">
-        <label>Até</label>
-        <input type="date" name="data_fim" value="{{ filtro_data_fim }}"/>
-      </div>
-      <div class="filter-actions">
-        <button type="submit" class="btn-filtrar">Filtrar</button>
-        <a href="/lancamentos" class="btn-limpar">Limpar</a>
-      </div>
-    </form>
+  <!-- TOOLBAR -->
+  {% set keep = '&situacao=' ~ filtro_situacao ~ '&data_ini=' ~ filtro_data_ini ~ '&data_fim=' ~ filtro_data_fim %}
+  {% set adv = (1 if filtro_situacao else 0) + (1 if filtro_data_ini else 0) + (1 if filtro_data_fim else 0) %}
+  <div class="toolbar">
+    <div class="pills">
+      <a class="pill {{ 'active' if not filtro_tipo }}" href="/lancamentos?tipo={{ keep }}">Todos</a>
+      <a class="pill {{ 'active' if filtro_tipo == 'receita' }}" href="/lancamentos?tipo=receita{{ keep }}">Receitas</a>
+      <a class="pill {{ 'active' if filtro_tipo == 'despesa' }}" href="/lancamentos?tipo=despesa{{ keep }}">Despesas</a>
+    </div>
+    <button class="tool-btn" id="filterToggle" aria-label="Filtros avançados" onclick="toggleDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+      {% if adv %}<span class="badge">{{ adv }}</span>{% endif %}
+    </button>
+    <a class="tool-btn" aria-label="Exportar PDF"
+       href="/lancamentos/exportar-pdf?tipo={{ filtro_tipo }}&situacao={{ filtro_situacao }}&data_ini={{ filtro_data_ini }}&data_fim={{ filtro_data_fim }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+    </a>
   </div>
 
-  {% if filtro_tipo or filtro_situacao or filtro_data_ini or filtro_data_fim %}
-  <div class="chips">
-    {% if filtro_tipo      %}<span class="chip">Tipo: {{ filtro_tipo }}</span>{% endif %}
-    {% if filtro_situacao  %}<span class="chip">Situação: {{ filtro_situacao }}</span>{% endif %}
-    {% if filtro_data_ini  %}<span class="chip">De: {{ filtro_data_ini }}</span>{% endif %}
-    {% if filtro_data_fim  %}<span class="chip">Até: {{ filtro_data_fim }}</span>{% endif %}
+  <!-- FILTER DRAWER -->
+  <div class="drawer {{ 'open' if adv }}" id="drawer">
+    <div class="drawer-inner">
+      <form method="GET" action="/lancamentos">
+        <input type="hidden" name="tipo" value="{{ filtro_tipo }}"/>
+        <div class="fg">
+          <label>Situação</label>
+          <select name="situacao">
+            <option value="">Todas</option>
+            <option value="ativo"   {% if filtro_situacao == 'ativo'   %}selected{% endif %}>Ativo</option>
+            <option value="inativo" {% if filtro_situacao == 'inativo' %}selected{% endif %}>Inativo</option>
+          </select>
+        </div>
+        <div class="drawer-dates">
+          <div class="fg">
+            <label>De</label>
+            <input type="date" name="data_ini" value="{{ filtro_data_ini }}"/>
+          </div>
+          <div class="fg">
+            <label>Até</label>
+            <input type="date" name="data_fim" value="{{ filtro_data_fim }}"/>
+          </div>
+        </div>
+        <div class="drawer-actions">
+          <button type="submit" class="btn-apply">Aplicar</button>
+          <a href="/lancamentos" class="btn-clear">Limpar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LEDGER -->
+  <div class="ledger-head">
+    <span class="t">Movimentações</span>
+    <span class="c">{{ registros|length }} registro{{ 's' if registros|length != 1 else '' }}</span>
+  </div>
+
+  {% if registros %}
+  <div class="feed">
+    {% for r in registros %}
+    <div class="tx {{ r.tipo_lancamento }} {{ 'inativo' if r.situacao != 'ativo' }}">
+      <div class="tx-ico">{{ '↑' if r.tipo_lancamento == 'receita' else '↓' }}</div>
+      <div class="tx-body">
+        <div class="tx-desc">{{ r.descricao }}</div>
+        <div class="tx-meta">
+          <span>{{ r.data_lancamento.strftime('%d/%m/%Y') }}</span>
+          {% if r.observacao %}<span class="sep"></span><span>{{ r.observacao }}</span>{% endif %}
+          {% if r.situacao != 'ativo' %}<span class="tx-inativo-tag">Inativo</span>{% endif %}
+        </div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-valor">{{ '+' if r.tipo_lancamento == 'receita' else '−' }}{{ r.valor | brl }}</div>
+        <div class="tx-actions">
+          <a href="/lancamentos/editar/{{ r.id }}" class="tx-act edit" aria-label="Editar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </a>
+          <button class="tx-act del" aria-label="Excluir"
+                  data-id="{{ r.id }}" data-descricao="{{ r.descricao|e }}"
+                  onclick="abrirModal(this.dataset.id, this.dataset.descricao)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="em-mark">🐎</div>
+    <div class="em-t">Cocho vazio</div>
+    <div class="em-s">Nenhuma movimentação por aqui. Solta o primeiro lançamento.</div>
   </div>
   {% endif %}
 
-  <div class="summary">
-    <div class="scard receita">
-      <div class="scard-label">Total Receitas</div>
-      <div class="scard-value">{{ total_receitas | brl }}</div>
-    </div>
-    <div class="scard despesa">
-      <div class="scard-label">Total Despesas</div>
-      <div class="scard-value">{{ total_despesas | brl }}</div>
-    </div>
-    <div class="scard {{ 'saldo-neg' if saldo < 0 else 'saldo' }}">
-      <div class="scard-label">Saldo</div>
-      <div class="scard-value">{{ saldo | brl }}</div>
-    </div>
-  </div>
-
-  <div class="table-wrap">
-    <div class="table-head">
-      <span class="table-title">Extrato de lançamentos</span>
-      <span class="table-count">{{ registros|length }} registros</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Descrição</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Situação</th><th>Observação</th><th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in registros %}
-        <tr>
-          <td class="td-id">{{ r.id }}</td>
-          <td>{{ r.descricao }}</td>
-          <td class="td-date">{{ r.data_lancamento.strftime('%d/%m/%Y') }}</td>
-          <td>
-            <span class="badge badge-{{ r.tipo_lancamento }}">
-              {{ 'Receita' if r.tipo_lancamento == 'receita' else 'Despesa' }}
-            </span>
-          </td>
-          <td class="td-valor {{ 'receita-val' if r.tipo_lancamento == 'receita' else 'despesa-val' }}">
-            {{ '−&nbsp;' if r.tipo_lancamento == 'despesa' else '' }}{{ r.valor | brl }}
-          </td>
-          <td>
-            <span class="badge badge-{{ r.situacao }}">
-              {{ 'Ativo' if r.situacao == 'ativo' else 'Inativo' }}
-            </span>
-          </td>
-          <td class="td-obs">{{ r.observacao or '—' }}</td>
-          <td class="td-actions">
-            <a href="/lancamentos/editar/{{ r.id }}" class="btn-edit">Editar</a>
-            <button class="btn-del"
-                    data-id="{{ r.id }}"
-                    data-descricao="{{ r.descricao|e }}"
-                    onclick="abrirModal(this.dataset.id, this.dataset.descricao)">Excluir</button>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
 </main>
+
+<a href="/lancamentos/novo" class="fab"><span class="plus">+</span><span class="lbl">Novo</span></a>
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
@@ -441,17 +442,18 @@
 </div>
 
 <script>
-  // ── flash auto-dismiss ──────────────────────────────────────────────────────
   function dismissFlash(el) {
     el.classList.add('hide');
     setTimeout(() => el.closest('.flash-wrap')?.remove(), 420);
   }
-
   document.querySelectorAll('[data-flash]').forEach(el => {
     setTimeout(() => dismissFlash(el), 4000);
   });
 
-  // ── modal ───────────────────────────────────────────────────────────────────
+  function toggleDrawer() {
+    document.getElementById('drawer').classList.toggle('open');
+  }
+
   function abrirModal(id, desc) {
     document.getElementById('formExcluir').action = '/lancamentos/excluir/' + id;
     document.getElementById('modalMsg').textContent =
@@ -464,6 +466,10 @@
   document.getElementById('modalOverlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) fecharModal();
   });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');
+  }
 </script>
 
 </body>

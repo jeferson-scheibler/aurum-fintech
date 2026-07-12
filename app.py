@@ -6,7 +6,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
 from datetime import datetime
+import re
 
+import pdfplumber
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -23,6 +25,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8MB, limite de upload do comprovante
 
 @app.template_filter('brl')
 def brl_filter(value):
@@ -57,29 +60,73 @@ def login_required(f):
     return decorated
 
 
+# ── COMPROVANTES: extração de dados a partir de PDF compartilhado ──────────────
+
+def _extrair_comprovante(texto):
+    valor = None
+    m = re.search(r'valor[^\n]{0,30}?R\$\s*([\d.]{1,12},\d{2})', texto, re.IGNORECASE)
+    if not m:
+        m = re.search(r'R\$\s*([\d.]{1,12},\d{2})', texto)
+    if m:
+        valor = m.group(1).replace('.', '').replace(',', '.')
+
+    data_lancamento = None
+    m = re.search(r'(\d{2})/(\d{2})/(\d{4})', texto)
+    if m:
+        dia, mes, ano = m.groups()
+        data_lancamento = f'{ano}-{mes}-{dia}'
+
+    texto_lower = texto.lower()
+    if 'pix' in texto_lower:
+        rotulo = 'Pagamento PIX'
+    elif 'boleto' in texto_lower:
+        rotulo = 'Pagamento de boleto'
+    else:
+        rotulo = 'Comprovante de pagamento'
+
+    descricao = rotulo
+    for chave in ('favorecido', 'beneficiário', 'beneficiario', 'recebedor', 'para'):
+        m = re.search(rf'{chave}\s*[:\-]?\s*([^\n]{{3,60}})', texto, re.IGNORECASE)
+        if m:
+            nome = m.group(1).strip(' -:')
+            if nome:
+                descricao = f'{rotulo}: {nome}'
+                break
+
+    return {
+        'descricao': descricao,
+        'data_lancamento': data_lancamento or '',
+        'valor': valor or '',
+        'tipo_lancamento': 'despesa',
+        'situacao': 'ativo',
+        'observacao': ' '.join(texto.split())[:140],
+        'valor_encontrado': valor is not None,
+    }
+
+
 def _email_html(acao, campos):
     if acao == 'criado':
         cor_acao, label_acao = '#4caf7d', 'Novo Lançamento'
     elif acao == 'excluido':
         cor_acao, label_acao = '#c97a7a', 'Lançamento Excluído'
     else:
-        cor_acao, label_acao = '#C9A84C', 'Lançamento Atualizado'
+        cor_acao, label_acao = '#00FF4E', 'Lançamento Atualizado'
     tipo       = campos.get('tipo_lancamento', '')
     cor_tipo   = '#4caf7d' if tipo == 'receita' else '#c97a7a'
     valor_fmt  = f"R$ {float(campos.get('valor', 0)):,.2f}".replace(',','X').replace('.',',').replace('X','.')
 
-    def row(label, valor, cor='#E8E2D0'):
+    def row(label, valor, cor='#FFFFFF'):
         return (
             '<tr>'
-            f'<td style="padding:10px 0;border-bottom:1px solid #2a2820;font-size:10px;'
-            f'letter-spacing:.15em;text-transform:uppercase;color:#6b6550;width:36%;">{label}</td>'
-            f'<td style="padding:10px 0;border-bottom:1px solid #2a2820;font-size:13px;'
+            f'<td style="padding:10px 0;border-bottom:1px solid #333333;font-size:10px;'
+            f'letter-spacing:.15em;text-transform:uppercase;color:#8a8a8a;width:36%;">{label}</td>'
+            f'<td style="padding:10px 0;border-bottom:1px solid #333333;font-size:13px;'
             f'color:{cor};font-family:\'Courier New\',monospace;">{valor}</td>'
             '</tr>'
         )
 
     rows = (
-          row('ID',        f"#{campos.get('id', '—')}")
+          row('ID',        f"#{campos.get('id', '·')}")
         + row('Descrição', campos.get('descricao', ''))
         + row('Data',      campos.get('data_lancamento', ''))
         + row('Tipo',      tipo.capitalize(), cor_tipo)
@@ -90,29 +137,29 @@ def _email_html(acao, campos):
     banner_homolog = (
         '<tr><td style="background:#7a5c00;padding:10px 36px;font-size:10px;letter-spacing:.18em;'
         'text-transform:uppercase;color:#ffe082;text-align:center;">'
-        '&#9888; AMBIENTE DE HOMOLOGA&Ccedil;&Atilde;O &mdash; este e-mail n&atilde;o &eacute; real'
+        '&#9888; AMBIENTE DE HOMOLOGA&Ccedil;&Atilde;O: este e-mail n&atilde;o &eacute; real'
         '</td></tr>'
     ) if APP_ENV != 'producao' else ''
 
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#0B0B0E;font-family:'Courier New',Courier,monospace;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B0E;padding:40px 0;">
+<body style="margin:0;padding:0;background:#000000;font-family:'Courier New',Courier,monospace;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:40px 0;">
 <tr><td align="center">
 <table width="540" cellpadding="0" cellspacing="0"
-       style="background:#111116;border:1px solid #2a2820;max-width:540px;width:100%;">
+       style="background:#242424;border:1px solid #333333;max-width:540px;width:100%;">
 
   {banner_homolog}
-  <tr><td style="height:2px;background:linear-gradient(90deg,transparent,#C9A84C,transparent);font-size:0;">&nbsp;</td></tr>
+  <tr><td style="height:2px;background:linear-gradient(90deg,transparent,#00FF4E,transparent);font-size:0;">&nbsp;</td></tr>
 
   <tr>
-    <td style="padding:32px 36px 24px;border-bottom:1px solid #2a2820;">
-      <span style="font-size:26px;color:#C9A84C;font-family:Georgia,serif;font-weight:300;">&#9419;</span>
-      <span style="font-size:14px;color:#E8E2D0;font-family:Georgia,serif;
-                   letter-spacing:.28em;text-transform:uppercase;margin-left:8px;">AURUM</span>
+    <td style="padding:32px 36px 24px;border-bottom:1px solid #333333;">
+      <span style="font-size:22px;color:#00FF4E;font-family:Georgia,serif;font-weight:700;">&#9670;</span>
+      <span style="font-size:14px;color:#FFFFFF;font-family:Georgia,serif;
+                   letter-spacing:.28em;text-transform:uppercase;margin-left:8px;">BAGUAL</span>
       <p style="margin:10px 0 0;font-size:9px;letter-spacing:.22em;
-                text-transform:uppercase;color:#6b6550;">Gestão Financeira</p>
+                text-transform:uppercase;color:#8a8a8a;">Força. Velocidade. Liberdade.</p>
     </td>
   </tr>
 
@@ -131,10 +178,10 @@ def _email_html(acao, campos):
   </tr>
 
   <tr>
-    <td style="padding:18px 36px 24px;border-top:1px solid #2a2820;">
+    <td style="padding:18px 36px 24px;border-top:1px solid #333333;">
       <p style="margin:0;font-size:9px;letter-spacing:.15em;
-                text-transform:uppercase;color:#6b6550;">
-        {datetime.now().strftime('%d/%m/%Y às %H:%M')} &nbsp;·&nbsp; Aurum Fintech
+                text-transform:uppercase;color:#8a8a8a;">
+        {datetime.now().strftime('%d/%m/%Y às %H:%M')} &nbsp;·&nbsp; Bagual
       </p>
     </td>
   </tr>
@@ -340,7 +387,7 @@ def novo_lancamento():
 
                 flash('Lançamento criado com sucesso.', 'ok')
                 enviar_email(
-                    assunto=f'[Aurum] Novo lançamento — {descricao}',
+                    assunto=f'[Bagual] Novo lançamento: {descricao}',
                     campos=dict(id=novo_id, descricao=descricao, data_lancamento=data_lancamento,
                                 valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao, observacao=observacao),
                     acao='criado',
@@ -350,8 +397,37 @@ def novo_lancamento():
             except Exception as e:
                 erro = f'Erro ao salvar: {e}'
 
-    return render_template('form_lancamento.html', acao='Novo', lancamento=None,
+    prefill = session.pop('prefill', None) if request.method == 'GET' else None
+    return render_template('form_lancamento.html', acao='Novo', lancamento=None, prefill=prefill,
                            erro=erro, usuario_nome=session.get('usuario_nome'))
+
+
+# ── COMPARTILHAR: recebe comprovante via Web Share Target e pré-preenche ───────
+
+@app.route('/compartilhar', methods=['POST'])
+@login_required
+def compartilhar():
+    arquivo = request.files.get('comprovante')
+
+    if not arquivo or arquivo.mimetype != 'application/pdf':
+        flash('Não consegui ler o comprovante compartilhado. Preencha manualmente.', 'erro')
+        return redirect(url_for('novo_lancamento'))
+
+    try:
+        texto = ''
+        with pdfplumber.open(BytesIO(arquivo.read())) as pdf:
+            for pagina in pdf.pages:
+                texto += (pagina.extract_text() or '') + '\n'
+
+        dados = _extrair_comprovante(texto)
+        if not dados['valor_encontrado']:
+            flash('Não encontrei o valor no comprovante. Confira os campos antes de salvar.', 'erro')
+        dados.pop('valor_encontrado')
+        session['prefill'] = dados
+    except Exception:
+        flash('Não consegui ler o comprovante compartilhado. Preencha manualmente.', 'erro')
+
+    return redirect(url_for('novo_lancamento'))
 
 
 # ── EDITAR ─────────────────────────────────────────────────────────────────────
@@ -388,7 +464,7 @@ def editar_lancamento(id):
 
                 flash('Lançamento atualizado.', 'ok')
                 enviar_email(
-                    assunto=f'[Aurum] Lançamento atualizado — {descricao}',
+                    assunto=f'[Bagual] Lançamento atualizado: {descricao}',
                     campos=dict(id=id, descricao=descricao, data_lancamento=data_lancamento,
                                 valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao, observacao=observacao),
                     acao='atualizado',
@@ -427,7 +503,7 @@ def excluir_lancamento(id):
         flash('Lançamento excluído.', 'ok')
         if lancamento:
             enviar_email(
-                assunto=f'[Aurum] Lançamento excluído — {lancamento["descricao"]}',
+                assunto=f'[Bagual] Lançamento excluído: {lancamento["descricao"]}',
                 campos=dict(id=id, descricao=lancamento['descricao'],
                             data_lancamento=lancamento['data_lancamento'],
                             valor=lancamento['valor'],
@@ -450,15 +526,15 @@ def exportar_pdf():
     registros = _buscar_lancamentos(filtros)
     total_receitas, total_despesas, saldo = _calcular_totais(registros)
 
-    GOLD    = colors.HexColor('#C9A84C')
-    DARK    = colors.HexColor('#0B0B0E')
-    SURFACE = colors.HexColor('#111116')
-    SURFACE2= colors.HexColor('#16161c')
+    GOLD    = colors.HexColor('#00FF4E')
+    DARK    = colors.HexColor('#000000')
+    SURFACE = colors.HexColor('#242424')
+    SURFACE2= colors.HexColor('#1a1a1a')
     GREEN   = colors.HexColor('#4caf7d')
     RED     = colors.HexColor('#c97a7a')
-    MUTED   = colors.HexColor('#6b6550')
-    TEXT    = colors.HexColor('#E8E2D0')
-    BORDER  = colors.HexColor('#2a2820')
+    MUTED   = colors.HexColor('#8a8a8a')
+    TEXT    = colors.HexColor('#FFFFFF')
+    BORDER  = colors.HexColor('#333333')
 
     PAGE_W, PAGE_H = A4
     M = 15 * mm
@@ -480,11 +556,11 @@ def exportar_pdf():
 
         c.setFont('Helvetica-Bold', 22)
         c.setFillColor(GOLD)
-        c.drawString(M, PAGE_H - 18 * mm, 'AURUM')
+        c.drawString(M, PAGE_H - 18 * mm, 'BAGUAL')
 
         c.setFont('Helvetica', 8)
         c.setFillColor(MUTED)
-        c.drawString(M, PAGE_H - 23 * mm, 'GESTAO FINANCEIRA')
+        c.drawString(M, PAGE_H - 23 * mm, 'FORCA. VELOCIDADE. LIBERDADE.')
         c.drawRightString(PAGE_W - M, PAGE_H - 18 * mm,
                           f'Extrato de Lancamentos  .  {datetime.now().strftime("%d/%m/%Y")}')
 
@@ -528,7 +604,7 @@ def exportar_pdf():
         c.line(M, footer_y + 4 * mm, PAGE_W - M, footer_y + 4 * mm)
         c.setFont('Helvetica', 7)
         c.setFillColor(MUTED)
-        c.drawString(M, footer_y, 'AURUM FINTECH')
+        c.drawString(M, footer_y, 'BAGUAL')
         c.drawRightString(PAGE_W - M, footer_y,
                           f'Gerado em {datetime.now().strftime("%d/%m/%Y as %H:%M")}')
 
@@ -571,7 +647,7 @@ def exportar_pdf():
             mkcell('Receita' if receita else 'Despesa',       cell_s, cor_val),
             mkcell(f"{sinal}{fmt(r['valor'])}",               cell_s, cor_val),
             mkcell('Ativo' if r['situacao'] == 'ativo' else 'Inativo', cell_m,
-                   None if r['situacao'] == 'ativo' else '#6b6550'),
+                   None if r['situacao'] == 'ativo' else '#8a8a8a'),
         ])
 
     tabela = Table(rows, colWidths=col_w, repeatRows=1)
@@ -618,7 +694,7 @@ def exportar_pdf():
     resp = make_response(buffer.read())
     resp.headers['Content-Type']        = 'application/pdf'
     resp.headers['Content-Disposition'] = \
-        f'attachment; filename="aurum_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
+        f'attachment; filename="bagual_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
     return resp
 
 if __name__ == '__main__':
