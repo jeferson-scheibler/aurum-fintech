@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="theme-color" content="#00FF4E"/>
+  <meta name="color-scheme" content="dark"/>
   <title>Bahgoal · Veículo</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
@@ -142,7 +143,7 @@
 <body>
 
 <nav>
-  <a href="/home" class="nav-brand" style="text-decoration:none;">
+  <a href="/home" class="nav-brand" style="text-decoration:none;color:inherit;">
     <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
     <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
   </a>
