@@ -5,7 +5,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 import pdfplumber
@@ -100,6 +100,81 @@ def _extrair_comprovante(texto):
         'tipo_lancamento': 'despesa',
         'situacao': 'ativo',
         'observacao': ' '.join(texto.split())[:140],
+        'valor_encontrado': valor is not None,
+    }
+
+
+# ── CHAT: interpreta uma frase em linguagem natural (parser por regras, local) ──
+
+RECEITA_KW = ('recebi', 'ganhei', 'salário', 'salario', 'entrou', 'vendi',
+              'rendimento', 'depósito', 'deposito', 'freela', 'renda',
+              'reembolso', 'restituição', 'restituicao')
+DESPESA_KW = ('gastei', 'paguei', 'comprei', 'gasto', 'débito', 'debito',
+              'saída', 'saida', 'boleto', 'conta')
+
+
+def _interpretar_texto(texto):
+    t   = texto.strip()
+    low = t.lower()
+
+    # valor: primeiro número (aceita R$, milhar com ponto e decimal com vírgula)
+    valor = None
+    m = re.search(r'(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)', low)
+    if m:
+        raw = m.group(1)
+        if '.' in raw and ',' in raw:
+            raw = raw.replace('.', '').replace(',', '.')        # 1.200,50 -> 1200.50
+        elif ',' in raw:
+            raw = raw.replace(',', '.')                          # 89,90 -> 89.90
+        elif re.match(r'^\d{1,3}\.\d{3}$', raw):
+            raw = raw.replace('.', '')                           # 1.200 -> 1200
+        try:
+            valor = f'{float(raw):.2f}'
+        except ValueError:
+            valor = None
+
+    # tipo: sinal explícito ou palavras-chave; default despesa
+    tipo = 'despesa'
+    if t.lstrip().startswith('+') or any(k in low for k in RECEITA_KW):
+        tipo = 'receita'
+    if t.lstrip().startswith('-') or any(k in low for k in DESPESA_KW):
+        tipo = 'despesa'
+
+    # data: hoje/ontem/anteontem/"dia N[/M]"; default hoje
+    hoje = datetime.now().date()
+    data = hoje
+    if 'anteontem' in low:
+        data = hoje - timedelta(days=2)
+    elif 'ontem' in low:
+        data = hoje - timedelta(days=1)
+    else:
+        md = re.search(r'dia\s+(\d{1,2})(?:/(\d{1,2}))?', low)
+        if md:
+            dia = int(md.group(1))
+            mes = int(md.group(2)) if md.group(2) else hoje.month
+            try:
+                data = hoje.replace(day=dia, month=mes)
+            except ValueError:
+                data = hoje
+
+    # descrição: remove valor, verbos, marcadores de data e preposição inicial
+    desc = t
+    if m:
+        desc = desc.replace(m.group(0), ' ')
+    desc = re.sub(r'(?i)\b(r\$|reais|hoje|ontem|anteontem|gastei|paguei|comprei|'
+                  r'recebi|ganhei|vendi)\b', ' ', desc)
+    desc = re.sub(r'(?i)\bdia\s+\d{1,2}(?:/\d{1,2})?\b', ' ', desc)
+    desc = re.sub(r'(?i)^[\s\-+]*(no|na|em|com|de|do|da|para|pra|o|a)\b', ' ', desc)
+    desc = re.sub(r'\s+', ' ', desc).strip(' -+.,')
+    desc = (desc[0].upper() + desc[1:]) if desc else 'Lançamento'
+
+    return {
+        'descricao': desc,
+        'data_lancamento': data.strftime('%Y-%m-%d'),
+        'valor': valor or '',
+        'tipo_lancamento': tipo,
+        'situacao': 'ativo',
+        'observacao': t[:140],
         'valor_encontrado': valor is not None,
     }
 
@@ -363,6 +438,83 @@ def alterar_senha():
                            usuario_email=session.get('usuario_email', ''),
                            erro=None, ok=None,
                            erro_senha=erro_senha, ok_senha=ok_senha)
+
+
+# ── CHAT: registro de lançamento por linguagem natural ─────────────────────────
+
+@app.route('/chat', methods=['GET', 'POST'])
+@login_required
+def chat():
+    if request.method == 'POST':
+        texto = request.form.get('mensagem', '').strip()
+        if texto:
+            dados = _interpretar_texto(texto)
+            session['chat_msg'] = texto
+            if dados['valor_encontrado']:
+                session['chat_draft'] = dados
+                session.pop('chat_erro', None)
+            else:
+                session.pop('chat_draft', None)
+                session['chat_erro'] = ('Não identifiquei o valor. Tente algo como '
+                                        '"gastei 50 no mercado" ou "recebi 3000 de salário".')
+        return redirect(url_for('chat'))
+
+    return render_template('chat.html',
+                           draft=session.get('chat_draft'),
+                           msg=session.get('chat_msg'),
+                           erro=session.get('chat_erro'),
+                           usuario_nome=session.get('usuario_nome'))
+
+
+@app.route('/chat/confirmar', methods=['POST'])
+@login_required
+def chat_confirmar():
+    descricao       = request.form.get('descricao', '').strip()
+    data_lancamento = request.form.get('data_lancamento', '')
+    valor           = request.form.get('valor', '').replace(',', '.')
+    tipo_lancamento = request.form.get('tipo_lancamento', '')
+    observacao      = request.form.get('observacao', '').strip()
+
+    if not all([descricao, data_lancamento, valor, tipo_lancamento]):
+        flash('Faltou algum dado pra registrar o lançamento.', 'erro')
+        return redirect(url_for('chat'))
+
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute(
+            """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
+            (descricao, data_lancamento, float(valor), tipo_lancamento, 'ativo', observacao)
+        )
+        novo_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        for k in ('chat_draft', 'chat_msg', 'chat_erro'):
+            session.pop(k, None)
+
+        flash('Lançamento registrado pelo chat.', 'ok')
+        enviar_email(
+            assunto=f'[Bagual] Novo lançamento: {descricao}',
+            campos=dict(id=novo_id, descricao=descricao, data_lancamento=data_lancamento,
+                        valor=valor, tipo_lancamento=tipo_lancamento, situacao='ativo', observacao=observacao),
+            acao='criado',
+            email_destinatario=session.get('usuario_email', ''),
+        )
+        return redirect(url_for('lancamentos'))
+    except Exception as e:
+        flash(f'Erro ao salvar: {e}', 'erro')
+        return redirect(url_for('chat'))
+
+
+@app.route('/chat/descartar', methods=['POST'])
+@login_required
+def chat_descartar():
+    for k in ('chat_draft', 'chat_msg', 'chat_erro'):
+        session.pop(k, None)
+    return redirect(url_for('chat'))
 
 
 # ── LISTAR ─────────────────────────────────────────────────────────────────────
