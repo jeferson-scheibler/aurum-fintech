@@ -63,7 +63,7 @@ def test_logout_encerra_sessao(logged_client):
 def test_listagem_acessivel(logged_client):
     resp = logged_client.get('/lancamentos')
     assert resp.status_code == 200
-    assert 'Extrato'.encode() in resp.data
+    assert 'Movimenta'.encode() in resp.data
 
 
 def test_perfil_carrega(logged_client):
@@ -222,13 +222,13 @@ def test_excluir_lancamento(logged_client):
 def test_filtro_tipo_receita(logged_client):
     resp = logged_client.get('/lancamentos?tipo=receita')
     assert resp.status_code == 200
-    assert b'Tipo: receita' in resp.data
+    assert b'active" href="/lancamentos?tipo=receita' in resp.data
 
 
 def test_filtro_tipo_despesa(logged_client):
     resp = logged_client.get('/lancamentos?tipo=despesa')
     assert resp.status_code == 200
-    assert b'Tipo: despesa' in resp.data
+    assert b'active" href="/lancamentos?tipo=despesa' in resp.data
 
 
 def test_filtro_situacao_inativo(logged_client):
