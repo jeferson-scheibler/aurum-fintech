@@ -133,10 +133,10 @@
 <body>
 
 <nav>
-  <div class="nav-brand">
+  <a href="/home" class="nav-brand" style="text-decoration:none;">
     <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
     <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
-  </div>
+  </a>
   <div class="nav-right">
     <a href="/lancamentos" class="btn-nav">Lançamentos</a>
     <a href="/logout" class="btn-nav">Sair</a>
@@ -152,6 +152,7 @@
 
   <div class="composer">
     <form method="POST" action="/chat">
+      <input type="hidden" name="origem" value="chat"/>
       <input type="text" name="mensagem" placeholder="ex.: gastei 50 no mercado" autocomplete="off" autofocus required/>
       <button type="submit">Enviar</button>
     </form>
@@ -177,6 +178,7 @@
     <div class="bot-lead"><span class="dot"></span>Entendi isso — confira e confirme:</div>
     <div class="confirm">
       <form id="fConfirm" method="POST" action="/chat/confirmar">
+        <input type="hidden" name="origem" value="{{ chat_origem }}"/>
         <input type="hidden" name="observacao" value="{{ draft.observacao }}"/>
         <div class="grid">
           <div class="fg full">
@@ -200,7 +202,9 @@
           </div>
         </div>
       </form>
-      <form id="fDiscard" method="POST" action="/chat/descartar"></form>
+      <form id="fDiscard" method="POST" action="/chat/descartar">
+        <input type="hidden" name="origem" value="{{ chat_origem }}"/>
+      </form>
       <div class="confirm-actions">
         <button type="submit" form="fConfirm" class="btn-ok">Confirmar e registrar</button>
         <button type="submit" form="fDiscard" class="btn-cancel">Descartar</button>

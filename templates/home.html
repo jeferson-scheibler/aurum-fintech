@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#00FF4E"/>
+  <title>Bahgoal · Início</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
+  <link href="https://fonts.googleapis.com/css2?family=Baumans&family=Nova+Round&family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand:     #00FF4E;
+      --brand-dim: #0f8a34;
+      --brand-glow:rgba(0,255,78,.4);
+      --bg:        #060606;
+      --surface:   #141414;
+      --surface2:  #1c1c1c;
+      --border:    #2a2a2a;
+      --text:      #f2f2ec;
+      --muted:     #8a8a85;
+      --green:     #38e08f;
+      --green-bg:  rgba(56,224,143,0.10);
+      --red:       #ff5c5c;
+      --red-bg:    rgba(255,92,92,0.10);
+      --amber:     #ffb020;
+      --amber-bg:  rgba(255,176,32,0.10);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg); min-height: 100vh;
+      font-family: 'DM Mono', monospace; color: var(--text);
+      position: relative; overflow-x: hidden;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px; opacity: 0.16;
+      mask-image: radial-gradient(circle at 90% 0%, black, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,6,6,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 58px;
+    }
+    nav::after {
+      content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%;
+      background: linear-gradient(90deg, var(--brand) 0%, transparent 35%); opacity: .7;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-symbol { width: 28px; height: 28px; }
+    .nav-name   { display: flex; align-items: baseline; }
+    .w-bah  { font-family: 'Baumans', sans-serif; font-size: 20px; color: var(--brand); transform: skewX(-11deg); display: inline-block; }
+    .w-goal { font-family: 'Nova Round', sans-serif; font-size: 20px; letter-spacing: -0.01em; }
+    .nav-right  { display: flex; align-items: center; gap: 8px; }
+    .btn-nav {
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); padding: 7px 13px;
+      clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
+      transition: color .2s, border-color .2s;
+    }
+    .btn-nav:hover { color: var(--brand); border-color: var(--brand-dim); }
+    .btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+    main { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; padding: 20px 14px 48px; }
+
+    /* ── flash ── */
+    .flash-wrap { position: relative; margin-bottom: 16px; }
+    .flash {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; letter-spacing: 0.05em;
+      padding: 12px 14px; border-left: 3px solid;
+      animation: slideDown .35s ease both; transition: opacity .4s, transform .4s;
+    }
+    .flash.hide { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+    .flash.ok   { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+    .flash.erro { background: var(--red-bg);   color: var(--red);   border-color: var(--red); }
+    .flash-close { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; opacity: .6; margin-left: 12px; }
+    .flash-close:hover { opacity: 1; }
+    .flash-progress { position: absolute; bottom: 0; left: 0; height: 2px; animation: shrink 4s linear forwards; }
+    .flash.ok .flash-progress { background: var(--green); }
+    .flash.erro .flash-progress { background: var(--red); }
+    @keyframes shrink { from { width: 100%; } to { width: 0; } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── greeting ── */
+    .greet { margin-bottom: 20px; }
+    .eyebrow { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .eyebrow::before { content: ''; width: 18px; height: 1px; background: var(--brand); }
+    .greet h1 { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 28px; text-transform: lowercase; letter-spacing: -0.01em; line-height: 1; }
+
+    /* ── section heading ── */
+    .sec-head { display: flex; align-items: baseline; justify-content: space-between; margin: 28px 0 12px; }
+    .sec-head .t { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+    .sec-head .a { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand); text-decoration: none; cursor: pointer; background: none; border: none; font-family: 'DM Mono', monospace; }
+
+    /* ── chat composer ── */
+    .composer { position: relative; }
+    .composer form { display: flex; gap: 8px; }
+    .composer input {
+      flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-left: 2px solid var(--brand-dim);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 15px 16px; outline: none;
+      transition: border-color .2s;
+    }
+    .composer input:focus { border-left-color: var(--brand); }
+    .composer input::placeholder { color: #4a4a46; }
+    .composer button {
+      flex: none; padding: 0 20px; background: var(--brand); border: none; color: #06120a; cursor: pointer;
+      font-family: 'DM Mono', monospace; font-weight: 500; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%); transition: transform .16s;
+    }
+    .composer button:hover { transform: translateY(-1px); }
+    .hints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .hint { font-size: 10px; color: var(--muted); letter-spacing: 0.03em; border: 1px dashed var(--border); padding: 5px 10px; }
+
+    .msgs { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+    .bubble { max-width: 88%; padding: 12px 15px; font-size: 13px; line-height: 1.5; }
+    .bubble.user { align-self: flex-end; background: var(--brand); color: #06120a; clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%); }
+    .bubble.bot-erro { align-self: flex-start; background: var(--red-bg); border-left: 3px solid var(--red); color: var(--red); }
+    .bot-lead { align-self: flex-start; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; display: flex; align-items: center; gap: 8px; }
+    .bot-lead .dot { width: 6px; height: 6px; background: var(--brand); display: inline-block; }
+
+    .confirm {
+      position: relative; background: var(--surface); border: 1px solid var(--border);
+      padding: 22px 20px 20px; margin-top: 10px;
+      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+    }
+    .confirm::before { content: ''; position: absolute; top: 0; left: 0; width: 44%; height: 3px; background: var(--brand); box-shadow: 0 0 14px var(--brand-glow); }
+    .confirm .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    .fg.full { grid-column: 1 / -1; }
+    .fg label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+    .fg input, .fg select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-left: 2px solid var(--border);
+      color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 11px 12px; outline: none;
+      appearance: none; transition: border-color .2s;
+    }
+    .fg input:focus, .fg select:focus { border-left-color: var(--brand); }
+    .confirm-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-ok {
+      flex: 1; padding: 13px; border: none; background: var(--brand); color: #06120a; cursor: pointer;
+      font-family: 'DM Mono', monospace; font-weight: 500; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%); transition: transform .16s;
+    }
+    .btn-ok:hover { transform: translateY(-1px); }
+    .btn-cancel {
+      padding: 13px 18px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer;
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; transition: color .2s, border-color .2s;
+    }
+    .btn-cancel:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── insights ── */
+    .insights { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .insight {
+      background: var(--surface); border: 1px solid var(--border); padding: 14px 14px 12px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    }
+    .insight.full { grid-column: 1 / -1; }
+    .insight .k { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .insight .v { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 19px; }
+    .insight .s { font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+    .insight.up .v   { color: var(--green); }
+    .insight.down .v { color: var(--red); }
+
+    /* ── metas ── */
+    .metas { display: flex; flex-direction: column; gap: 10px; }
+    .meta-card {
+      position: relative; background: var(--surface); border: 1px solid var(--border);
+      padding: 16px 16px 14px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    }
+    .meta-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .meta-nome { font-size: 13px; font-weight: 500; color: var(--text); }
+    .meta-tag { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); padding: 2px 7px; flex: none; }
+    .meta-bar-wrap { height: 8px; background: var(--bg); border: 1px solid var(--border); margin-bottom: 8px; overflow: hidden; }
+    .meta-bar { height: 100%; transition: width .4s ease; }
+    .meta-card.ok       .meta-bar { background: var(--green); }
+    .meta-card.atencao  .meta-bar { background: var(--amber); }
+    .meta-card.estourou .meta-bar { background: var(--red); }
+    .meta-card.inicio   .meta-bar { background: var(--muted); }
+    .meta-foot { display: flex; align-items: baseline; justify-content: space-between; font-size: 11px; }
+    .meta-foot .valores { font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+    .meta-card.ok       .valores b { color: var(--green); }
+    .meta-card.atencao  .valores b { color: var(--amber); }
+    .meta-card.estourou .valores b { color: var(--red); }
+    .meta-foot .dias { color: var(--muted); font-size: 10px; }
+    .meta-del {
+      background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: underline;
+    }
+    .meta-del:hover { color: var(--red); }
+
+    .empty-metas {
+      text-align: center; padding: 26px 16px; border: 1px dashed var(--border);
+      color: var(--muted); font-size: 11px; letter-spacing: 0.03em; line-height: 1.6;
+    }
+
+    /* ── nova meta ── */
+    .meta-form { display: none; background: var(--surface); border: 1px solid var(--border); padding: 16px; margin-top: 10px; }
+    .meta-form.open { display: block; }
+    .meta-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .meta-form .fg { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .meta-form label { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+    .meta-form input, .meta-form select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-left: 2px solid var(--border);
+      color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 10px 11px; outline: none;
+      appearance: none;
+    }
+    .meta-form input:focus, .meta-form select:focus { border-left-color: var(--brand); }
+    .meta-form button {
+      width: 100%; padding: 12px; border: none; background: var(--brand); color: #06120a; cursor: pointer;
+      font-family: 'DM Mono', monospace; font-weight: 500; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 10px 100%);
+    }
+
+    @media (max-width: 420px) {
+      .insights { grid-template-columns: 1fr; }
+      .confirm .grid { grid-template-columns: 1fr; }
+      .meta-form .row2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/home" class="nav-brand" style="text-decoration:none;">
+    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
+    <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
+  </a>
+  <div class="nav-right">
+    <a href="/lancamentos" class="btn-nav">Lançamentos</a>
+    <a href="/logout" class="btn-nav btn-logout">Sair</a>
+  </div>
+</nav>
+
+<main>
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+    <div class="flash-wrap">
+      <div class="flash {{ cat }}" data-flash>
+        <span>{{ msg }}</span>
+        <button class="flash-close" onclick="dismissFlash(this.parentElement)">✕</button>
+        <span class="flash-progress"></span>
+      </div>
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="greet">
+    <div class="eyebrow">Bem-vindo de volta</div>
+    <h1>Olá, {{ usuario_nome }}</h1>
+  </div>
+
+  <!-- CHAT RÁPIDO -->
+  <div class="composer">
+    <form method="POST" action="/chat">
+      <input type="hidden" name="origem" value="home"/>
+      <input type="text" name="mensagem" placeholder="ex.: gastei 50 no mercado" autocomplete="off" required/>
+      <button type="submit">Enviar</button>
+    </form>
+    {% if not msg %}
+    <div class="hints">
+      <span class="hint">gastei 50 no mercado</span>
+      <span class="hint">recebi 3000 de salário</span>
+      <span class="hint">paguei 89,90 de luz ontem</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if msg %}
+  <div class="msgs">
+    <div class="bubble user">{{ msg }}</div>
+
+    {% if erro %}
+    <div class="bubble bot-erro">{{ erro }}</div>
+    {% elif draft %}
+    <div class="bot-lead"><span class="dot"></span>Entendi isso — confira e confirme:</div>
+    <div class="confirm">
+      <form id="fConfirm" method="POST" action="/chat/confirmar">
+        <input type="hidden" name="origem" value="{{ chat_origem }}"/>
+        <input type="hidden" name="observacao" value="{{ draft.observacao }}"/>
+        <div class="grid">
+          <div class="fg full">
+            <label for="descricao">Descrição</label>
+            <input type="text" id="descricao" name="descricao" value="{{ draft.descricao }}" required/>
+          </div>
+          <div class="fg">
+            <label for="valor">Valor (R$)</label>
+            <input type="number" id="valor" name="valor" step="0.01" min="0.01" value="{{ draft.valor }}" required/>
+          </div>
+          <div class="fg">
+            <label for="tipo_lancamento">Tipo</label>
+            <select id="tipo_lancamento" name="tipo_lancamento" required>
+              <option value="receita" {% if draft.tipo_lancamento == 'receita' %}selected{% endif %}>Receita</option>
+              <option value="despesa" {% if draft.tipo_lancamento == 'despesa' %}selected{% endif %}>Despesa</option>
+            </select>
+          </div>
+          <div class="fg full">
+            <label for="data_lancamento">Data</label>
+            <input type="date" id="data_lancamento" name="data_lancamento" value="{{ draft.data_lancamento }}" required/>
+          </div>
+        </div>
+      </form>
+      <form id="fDiscard" method="POST" action="/chat/descartar">
+        <input type="hidden" name="origem" value="{{ chat_origem }}"/>
+      </form>
+      <div class="confirm-actions">
+        <button type="submit" form="fConfirm" class="btn-ok">Confirmar e registrar</button>
+        <button type="submit" form="fDiscard" class="btn-cancel">Descartar</button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- INSIGHTS -->
+  <div class="sec-head"><span class="t">Como está o mês</span></div>
+  <div class="insights">
+    <div class="insight {{ 'down' if insights.variacao_pct and insights.variacao_pct > 0 else 'up' }}">
+      <div class="k">Vs. mês passado</div>
+      {% if insights.variacao_pct is not none %}
+        <div class="v">{{ '+' if insights.variacao_pct > 0 else '' }}{{ insights.variacao_pct }}%</div>
+        <div class="s">{{ insights.despesas_mes_atual | brl }} em despesas até agora</div>
+      {% else %}
+        <div class="v">—</div>
+        <div class="s">Sem dados do mês passado pra comparar</div>
+      {% endif %}
+    </div>
+    <div class="insight">
+      <div class="k">Projeção fim do mês</div>
+      <div class="v">{{ insights.projecao | brl }}</div>
+      <div class="s">Ritmo atual, dia {{ insights.dias_passados }} de {{ insights.dias_no_mes }}</div>
+    </div>
+    {% if insights.maior_gasto %}
+    <div class="insight full">
+      <div class="k">Maior gasto do mês</div>
+      <div class="v">{{ insights.maior_gasto.valor | brl }}</div>
+      <div class="s">{{ insights.maior_gasto.descricao }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- METAS -->
+  <div class="sec-head">
+    <span class="t">Metas</span>
+    <button type="button" class="a" onclick="toggleMetaForm()">+ Nova meta</button>
+  </div>
+
+  {% if metas %}
+  <div class="metas">
+    {% for m in metas %}
+    <div class="meta-card {{ m.status }}">
+      <div class="meta-top">
+        <span class="meta-nome">{{ m.nome }}</span>
+        <span class="meta-tag">{{ 'Limite' if m.tipo == 'limite' else 'Economia' }}</span>
+      </div>
+      <div class="meta-bar-wrap"><div class="meta-bar" style="width:{{ m.pct if m.pct <= 100 else 100 }}%;"></div></div>
+      <div class="meta-foot">
+        <span class="valores"><b>{{ m.progresso | brl }}</b> de {{ m.valor_alvo | brl }} · {{ m.pct }}%</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+          {% if m.dias_restantes is not none %}
+          <span class="dias">{{ m.dias_restantes }}d restantes</span>
+          {% endif %}
+          <form method="POST" action="/metas/excluir/{{ m.id }}" style="display:inline;">
+            <button type="submit" class="meta-del">excluir</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-metas">Nenhuma meta ainda. Crie uma pra acompanhar um limite de gasto ou uma economia.</div>
+  {% endif %}
+
+  <div class="meta-form" id="metaForm">
+    <form method="POST" action="/metas/nova">
+      <div class="fg">
+        <label>Nome</label>
+        <input type="text" name="nome" placeholder="Ex.: Mercado, Viagem de fim de ano..." required/>
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label>Tipo</label>
+          <select name="tipo" required>
+            <option value="limite">Limite de gasto (mensal)</option>
+            <option value="economia">Meta de economia</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Valor (R$)</label>
+          <input type="number" name="valor_alvo" step="0.01" min="0.01" required/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Data alvo (opcional, só pra economia)</label>
+        <input type="date" name="data_alvo"/>
+      </div>
+      <button type="submit">Criar meta</button>
+    </form>
+  </div>
+
+</main>
+
+<script>
+  function dismissFlash(el) {
+    el.classList.add('hide');
+    setTimeout(() => el.closest('.flash-wrap')?.remove(), 420);
+  }
+  document.querySelectorAll('[data-flash]').forEach(el => {
+    setTimeout(() => dismissFlash(el), 4000);
+  });
+
+  function toggleMetaForm() {
+    document.getElementById('metaForm').classList.toggle('open');
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');
+  }
+</script>
+
+</body>
+</html>
