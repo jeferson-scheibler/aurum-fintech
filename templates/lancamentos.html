@@ -7,7 +7,7 @@
   <title>Bahgoal · Lançamentos</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
-  <link href="https://fonts.googleapis.com/css2?family=Baumans&family=Nova+Round&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Baumans&family=Nova+Round&family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --brand:     #00FF4E;
@@ -107,7 +107,7 @@
     .hero-label { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
     .hero-label::before { content: ''; width: 16px; height: 1px; background: var(--brand); }
     .hero-saldo {
-      font-family: 'Nova Round', sans-serif; font-size: clamp(42px, 13vw, 60px);
+      font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: clamp(42px, 13vw, 60px);
       line-height: 1.0; letter-spacing: -0.02em;
       margin: 12px 0 18px; word-break: break-word;
     }
@@ -127,18 +127,8 @@
     .hero-chip.up .v   { color: var(--green); }
     .hero-chip.down .v { color: var(--red); }
 
-    /* ── toolbar: pills + actions ── */
-    .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-    .pills { display: flex; gap: 6px; flex: 1; min-width: 0; }
-    .pill {
-      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-      text-decoration: none; padding: 9px 14px; white-space: nowrap;
-      border: 1px solid var(--border); color: var(--muted); background: var(--surface);
-      clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
-      transition: color .2s, border-color .2s, background .2s;
-    }
-    .pill:hover { color: var(--text); }
-    .pill.active { background: var(--brand); color: #06120a; border-color: var(--brand); font-weight: 600; }
+    /* ── toolbar: actions ── */
+    .toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
     .tool-btn {
       display: grid; place-items: center; width: 40px; height: 38px; flex: none;
       border: 1px solid var(--border); color: var(--muted); background: var(--surface);
@@ -247,7 +237,7 @@
       clip-path: polygon(0 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px));
     }
     .empty img { width: 76px; height: auto; margin-bottom: 18px; opacity: .35; filter: grayscale(1) brightness(1.7); }
-    .empty .em-t { font-family: 'Nova Round', sans-serif; font-size: 22px; letter-spacing: -0.01em; margin-bottom: 8px; }
+    .empty .em-t { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; margin-bottom: 8px; }
     .empty .em-s { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; line-height: 1.6; }
 
     /* ── FAB ── */
@@ -280,7 +270,7 @@
     }
     @keyframes riseIn { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
     .modal::before { content: ''; position: absolute; top: 0; left: 0; width: 46%; height: 3px; background: var(--red); box-shadow: 0 0 14px rgba(255,92,92,.4); }
-    .modal h3 { font-family: 'Nova Round', sans-serif; font-size: 24px; text-transform: lowercase; letter-spacing: -0.01em; margin-bottom: 12px; }
+    .modal h3 { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 24px; text-transform: lowercase; letter-spacing: -0.01em; margin-bottom: 12px; }
     .modal p  { font-size: 11px; color: var(--muted); margin-bottom: 26px; line-height: 1.7; }
     .modal-actions { display: flex; gap: 10px; }
     .btn-cancel, .btn-confirm-del {
@@ -344,14 +334,8 @@
   </div>
 
   <!-- TOOLBAR -->
-  {% set keep = '&situacao=' ~ filtro_situacao ~ '&data_ini=' ~ filtro_data_ini ~ '&data_fim=' ~ filtro_data_fim %}
-  {% set adv = (1 if filtro_situacao else 0) + (1 if filtro_data_ini else 0) + (1 if filtro_data_fim else 0) %}
+  {% set adv = (1 if filtro_tipo else 0) + (1 if filtro_situacao else 0) + (1 if filtro_data_ini else 0) + (1 if filtro_data_fim else 0) %}
   <div class="toolbar">
-    <div class="pills">
-      <a class="pill {{ 'active' if not filtro_tipo }}" href="/lancamentos?tipo={{ keep }}">Todos</a>
-      <a class="pill {{ 'active' if filtro_tipo == 'receita' }}" href="/lancamentos?tipo=receita{{ keep }}">Receitas</a>
-      <a class="pill {{ 'active' if filtro_tipo == 'despesa' }}" href="/lancamentos?tipo=despesa{{ keep }}">Despesas</a>
-    </div>
     <button class="tool-btn" id="filterToggle" aria-label="Filtros avançados" onclick="toggleDrawer()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       {% if adv %}<span class="badge">{{ adv }}</span>{% endif %}
@@ -369,7 +353,14 @@
   <div class="drawer {{ 'open' if adv }}" id="drawer">
     <div class="drawer-inner">
       <form method="GET" action="/lancamentos">
-        <input type="hidden" name="tipo" value="{{ filtro_tipo }}"/>
+        <div class="fg">
+          <label>Tipo</label>
+          <select name="tipo">
+            <option value="">Todos</option>
+            <option value="receita" {% if filtro_tipo == 'receita' %}selected{% endif %}>Receitas</option>
+            <option value="despesa" {% if filtro_tipo == 'despesa' %}selected{% endif %}>Despesas</option>
+          </select>
+        </div>
         <div class="fg">
           <label>Situação</label>
           <select name="situacao">
