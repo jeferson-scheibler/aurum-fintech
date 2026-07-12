@@ -237,6 +237,7 @@
     <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
   </a>
   <div class="nav-right">
+    <a href="/veiculo" class="btn-nav">Veículo</a>
     <a href="/lancamentos" class="btn-nav">Lançamentos</a>
     <a href="/logout" class="btn-nav btn-logout">Sair</a>
   </div>
@@ -272,7 +273,7 @@
     <div class="hints">
       <span class="hint">gastei 50 no mercado</span>
       <span class="hint">recebi 3000 de salário</span>
-      <span class="hint">paguei 89,90 de luz ontem</span>
+      <span class="hint">abasteci 42 litros, 87450 km, R$ 320</span>
     </div>
     {% endif %}
   </div>
@@ -288,6 +289,27 @@
     <div class="confirm">
       <form id="fConfirm" method="POST" action="/chat/confirmar">
         <input type="hidden" name="origem" value="{{ chat_origem }}"/>
+        <input type="hidden" name="registro" value="{{ draft.registro }}"/>
+        {% if draft.registro == 'abastecimento' %}
+        <div class="grid">
+          <div class="fg full">
+            <label for="km">Km no odômetro</label>
+            <input type="number" id="km" name="km" step="0.1" min="0" value="{{ draft.km }}" required/>
+          </div>
+          <div class="fg">
+            <label for="litros">Litros</label>
+            <input type="number" id="litros" name="litros" step="0.01" min="0.01" value="{{ draft.litros }}" required/>
+          </div>
+          <div class="fg">
+            <label for="valor">Valor (R$)</label>
+            <input type="number" id="valor" name="valor" step="0.01" min="0.01" value="{{ draft.valor }}" required/>
+          </div>
+          <div class="fg full">
+            <label for="data_lancamento">Data</label>
+            <input type="date" id="data_lancamento" name="data_lancamento" value="{{ draft.data_lancamento }}" required/>
+          </div>
+        </div>
+        {% else %}
         <input type="hidden" name="observacao" value="{{ draft.observacao }}"/>
         <div class="grid">
           <div class="fg full">
@@ -310,6 +332,7 @@
             <input type="date" id="data_lancamento" name="data_lancamento" value="{{ draft.data_lancamento }}" required/>
           </div>
         </div>
+        {% endif %}
       </form>
       <form id="fDiscard" method="POST" action="/chat/descartar">
         <input type="hidden" name="origem" value="{{ chat_origem }}"/>

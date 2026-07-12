@@ -292,6 +292,7 @@ def _interpretar_texto(texto):
     desc = (desc[0].upper() + desc[1:]) if desc else 'Lançamento'
 
     return {
+        'registro': 'lancamento',
         'descricao': desc,
         'data_lancamento': data.strftime('%Y-%m-%d'),
         'valor': valor or '',
@@ -300,6 +301,83 @@ def _interpretar_texto(texto):
         'observacao': t[:140],
         'valor_encontrado': valor is not None,
     }
+
+
+# ── CHAT: abastecimento do veículo (mesmo parser por regras, local) ────────────
+
+ABASTECIMENTO_KW = ('abasteci', 'abastecimento', 'tanque cheio', 'completei o tanque')
+
+
+def _e_abastecimento(low):
+    tem_kw    = any(k in low for k in ABASTECIMENTO_KW)
+    tem_litro = re.search(r'\d+(?:[.,]\d+)?\s*(?:litros?|lts?\.?|l\b)', low) is not None
+    return tem_kw or (tem_litro and 'km' in low)
+
+
+def _interpretar_abastecimento(texto):
+    low  = texto.lower()
+    hoje = datetime.now().date()
+
+    m_litros = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:litros?|lts?\.?|l\b)', low)
+    litros = _normaliza_valor_br(m_litros.group(1)) if m_litros else None
+
+    m_km = re.search(r'(\d{2,7}(?:[.,]\d+)?)\s*km\b', low)
+    km = _normaliza_valor_br(m_km.group(1)) if m_km else None
+
+    m_valor = re.search(
+        r'r\$\s*([\d.]{1,12}(?:,\d{2})?)|(\d+,\d{2})|([\d.]{1,12}(?:,\d{2})?)\s*reais',
+        low
+    )
+    valor = None
+    if m_valor:
+        v = _normaliza_valor_br(m_valor.group(1) or m_valor.group(2) or m_valor.group(3))
+        valor = f'{v:.2f}' if v is not None else None
+
+    data = hoje
+    if 'anteontem' in low:
+        data = hoje - timedelta(days=2)
+    elif 'ontem' in low:
+        data = hoje - timedelta(days=1)
+
+    return {
+        'registro': 'abastecimento',
+        'km': km,
+        'litros': litros,
+        'valor': valor or '',
+        'data_lancamento': data.strftime('%Y-%m-%d'),
+        'observacao': texto[:140],
+        'valor_encontrado': km is not None and litros is not None and valor is not None,
+    }
+
+
+def _historico_abastecimentos(conn, veiculo_id):
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """SELECT * FROM abastecimento WHERE veiculo_id = %s AND situacao = 'ativo'
+           ORDER BY data ASC, km ASC""",
+        (veiculo_id,)
+    )
+    registros = cur.fetchall()
+    cur.close()
+
+    historico = []
+    anterior  = None
+    for r in registros:
+        km_rodados = consumo = custo_km = None
+        if anterior is not None:
+            km_rodados = float(r['km']) - float(anterior['km'])
+            if km_rodados > 0:
+                consumo  = km_rodados / float(r['litros'])
+                custo_km = float(r['valor_total']) / km_rodados
+        historico.append({
+            'id': r['id'], 'data': r['data'], 'km': float(r['km']),
+            'litros': float(r['litros']), 'valor_total': float(r['valor_total']),
+            'km_rodados': km_rodados, 'consumo': consumo, 'custo_km': custo_km,
+        })
+        anterior = r
+
+    historico.reverse()
+    return historico
 
 
 def _email_html(acao, campos):
@@ -739,7 +817,15 @@ def chat():
         texto  = request.form.get('mensagem', '').strip()
         origem = request.form.get('origem', 'chat')
         if texto:
-            dados = _interpretar_texto(texto)
+            low = texto.lower()
+            if _e_abastecimento(low):
+                dados    = _interpretar_abastecimento(texto)
+                erro_msg = ('Não identifiquei litros/km/valor. Tente algo como '
+                           '"abasteci 42 litros, 87450 km, R$ 320".')
+            else:
+                dados    = _interpretar_texto(texto)
+                erro_msg = ('Não identifiquei o valor. Tente algo como '
+                           '"gastei 50 no mercado" ou "recebi 3000 de salário".')
             session['chat_msg']    = texto
             session['chat_origem'] = origem
             if dados['valor_encontrado']:
@@ -747,8 +833,7 @@ def chat():
                 session.pop('chat_erro', None)
             else:
                 session.pop('chat_draft', None)
-                session['chat_erro'] = ('Não identifiquei o valor. Tente algo como '
-                                        '"gastei 50 no mercado" ou "recebi 3000 de salário".')
+                session['chat_erro'] = erro_msg
         return redirect(url_for('home' if origem == 'home' else 'chat'))
 
     return render_template('chat.html',
@@ -762,8 +847,57 @@ def chat():
 @app.route('/chat/confirmar', methods=['POST'])
 @login_required
 def chat_confirmar():
-    origem          = request.form.get('origem', 'chat')
-    destino_erro    = 'home' if origem == 'home' else 'chat'
+    origem       = request.form.get('origem', 'chat')
+    destino_erro = 'home' if origem == 'home' else 'chat'
+    registro     = request.form.get('registro', 'lancamento')
+
+    if registro == 'abastecimento':
+        km     = request.form.get('km', '').replace(',', '.')
+        litros = request.form.get('litros', '').replace(',', '.')
+        valor  = request.form.get('valor', '').replace(',', '.')
+        data   = request.form.get('data_lancamento', '')
+
+        if not all([km, litros, valor, data]):
+            session['chat_erro'] = 'Faltou algum dado pra registrar o abastecimento.'
+            return redirect(url_for(destino_erro))
+
+        try:
+            conn = get_conn()
+            cur  = conn.cursor()
+            cur.execute("SELECT id FROM veiculo WHERE situacao = 'ativo' ORDER BY id LIMIT 1")
+            row = cur.fetchone()
+            if not row:
+                session['chat_erro'] = 'Nenhum veículo cadastrado.'
+                cur.close()
+                conn.close()
+                return redirect(url_for(destino_erro))
+            veiculo_id = row[0]
+
+            cur.execute(
+                """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
+                   VALUES (%s, %s, %s, 'despesa', 'ativo', %s) RETURNING id""",
+                (f'Abastecimento ({litros}L)', data, float(valor), f'{km} km rodados no odômetro')
+            )
+            lancamento_id = cur.fetchone()[0]
+
+            cur.execute(
+                """INSERT INTO abastecimento (veiculo_id, data, km, litros, valor_total, lancamento_id)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                (veiculo_id, data, float(km), float(litros), float(valor), lancamento_id)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            for k in ('chat_draft', 'chat_msg', 'chat_erro', 'chat_origem'):
+                session.pop(k, None)
+
+            flash('Abastecimento registrado.', 'ok')
+            return redirect(url_for('home' if origem == 'home' else 'veiculo'))
+        except Exception as e:
+            session['chat_erro'] = f'Erro ao salvar: {e}'
+            return redirect(url_for(destino_erro))
+
     descricao       = request.form.get('descricao', '').strip()
     data_lancamento = request.form.get('data_lancamento', '')
     valor           = request.form.get('valor', '').replace(',', '.')
@@ -811,6 +945,56 @@ def chat_descartar():
     for k in ('chat_draft', 'chat_msg', 'chat_erro', 'chat_origem'):
         session.pop(k, None)
     return redirect(url_for('home' if origem == 'home' else 'chat'))
+
+
+# ── VEÍCULO: histórico de abastecimentos ────────────────────────────────────────
+
+@app.route('/veiculo')
+@login_required
+def veiculo():
+    conn = get_conn()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM veiculo WHERE situacao = 'ativo' ORDER BY id LIMIT 1")
+        v = cur.fetchone()
+        cur.close()
+        historico = _historico_abastecimentos(conn, v['id']) if v else []
+    finally:
+        conn.close()
+
+    consumos      = [h['consumo'] for h in historico if h['consumo']]
+    consumo_medio = sum(consumos) / len(consumos) if consumos else None
+
+    mes_atual = datetime.now().date().replace(day=1)
+    do_mes    = [h for h in historico if h['data'] >= mes_atual]
+
+    return render_template('veiculo.html',
+                           usuario_nome=session.get('usuario_nome'),
+                           veiculo=v,
+                           historico=historico,
+                           consumo_medio=consumo_medio,
+                           qtd_mes=len(do_mes),
+                           gasto_mes=sum(h['valor_total'] for h in do_mes))
+
+
+@app.route('/veiculo/excluir/<int:id>', methods=['POST'])
+@login_required
+def veiculo_excluir(id):
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute("SELECT lancamento_id FROM abastecimento WHERE id = %s", (id,))
+        row = cur.fetchone()
+        cur.execute("DELETE FROM abastecimento WHERE id = %s", (id,))
+        if row and row[0]:
+            cur.execute("DELETE FROM lancamento WHERE id = %s", (row[0],))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash('Abastecimento removido.', 'ok')
+    except Exception as e:
+        flash(f'Erro ao remover: {e}', 'erro')
+    return redirect(url_for('veiculo'))
 
 
 # ── LISTAR ─────────────────────────────────────────────────────────────────────

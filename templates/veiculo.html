@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#00FF4E"/>
+  <title>Bahgoal · Veículo</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
+  <link href="https://fonts.googleapis.com/css2?family=Baumans&family=Nova+Round&family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand:     #00FF4E;
+      --brand-dim: #0f8a34;
+      --brand-glow:rgba(0,255,78,.4);
+      --bg:        #060606;
+      --surface:   #141414;
+      --surface2:  #1c1c1c;
+      --border:    #2a2a2a;
+      --text:      #f2f2ec;
+      --muted:     #8a8a85;
+      --green:     #38e08f;
+      --green-bg:  rgba(56,224,143,0.10);
+      --red:       #ff5c5c;
+      --red-bg:    rgba(255,92,92,0.10);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg); min-height: 100vh;
+      font-family: 'DM Mono', monospace; color: var(--text);
+      position: relative; overflow-x: hidden;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px; opacity: 0.16;
+      mask-image: radial-gradient(circle at 90% 0%, black, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,6,6,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 58px;
+    }
+    nav::after {
+      content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%;
+      background: linear-gradient(90deg, var(--brand) 0%, transparent 35%); opacity: .7;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-symbol { width: 28px; height: 28px; }
+    .nav-name   { display: flex; align-items: baseline; }
+    .w-bah  { font-family: 'Baumans', sans-serif; font-size: 20px; color: var(--brand); transform: skewX(-11deg); display: inline-block; }
+    .w-goal { font-family: 'Nova Round', sans-serif; font-size: 20px; letter-spacing: -0.01em; }
+    .nav-right  { display: flex; align-items: center; gap: 8px; }
+    .btn-nav {
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); padding: 7px 13px;
+      clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
+      transition: color .2s, border-color .2s;
+    }
+    .btn-nav:hover { color: var(--brand); border-color: var(--brand-dim); }
+    .btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+    main { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; padding: 20px 14px 48px; }
+
+    /* ── flash ── */
+    .flash-wrap { position: relative; margin-bottom: 16px; }
+    .flash {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; letter-spacing: 0.05em;
+      padding: 12px 14px; border-left: 3px solid;
+      animation: slideDown .35s ease both; transition: opacity .4s, transform .4s;
+    }
+    .flash.hide { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+    .flash.ok   { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+    .flash.erro { background: var(--red-bg);   color: var(--red);   border-color: var(--red); }
+    .flash-close { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; opacity: .6; margin-left: 12px; }
+    .flash-close:hover { opacity: 1; }
+    .flash-progress { position: absolute; bottom: 0; left: 0; height: 2px; animation: shrink 4s linear forwards; }
+    .flash.ok .flash-progress { background: var(--green); }
+    .flash.erro .flash-progress { background: var(--red); }
+    @keyframes shrink { from { width: 100%; } to { width: 0; } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .eyebrow { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .eyebrow::before { content: ''; width: 18px; height: 1px; background: var(--brand); }
+    .head h1 { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 28px; text-transform: lowercase; letter-spacing: -0.01em; line-height: 1; margin-bottom: 4px; }
+    .head p { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+    .head { margin-bottom: 20px; }
+
+    .sec-head { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); margin: 24px 0 10px; }
+
+    /* ── resumo ── */
+    .resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .rcard {
+      background: var(--surface); border: 1px solid var(--border); padding: 14px 14px 12px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    }
+    .rcard.full { grid-column: 1 / -1; }
+    .rcard .k { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .rcard .v { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 19px; color: var(--brand); }
+    .rcard .s { font-size: 10px; color: var(--muted); margin-top: 5px; }
+
+    /* ── histórico ── */
+    .hist { display: flex; flex-direction: column; gap: 9px; }
+    .hrow {
+      position: relative; background: var(--surface); border: 1px solid var(--border);
+      padding: 14px 16px 12px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    }
+    .hrow::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--brand-dim); }
+    .hrow-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .hrow-data { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+    .hrow-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: var(--red); }
+    .hrow-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10.5px; color: var(--muted); }
+    .hrow-grid b { display: block; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 2px; }
+    .hrow-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .hrow-del {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: underline;
+    }
+    .hrow-del:hover { color: var(--red); }
+
+    .empty {
+      text-align: center; padding: 40px 20px; border: 1px dashed var(--border);
+      color: var(--muted); font-size: 11px; letter-spacing: 0.03em; line-height: 1.7;
+    }
+
+    @media (max-width: 400px) {
+      .resumo { grid-template-columns: 1fr; }
+      .hrow-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/home" class="nav-brand" style="text-decoration:none;">
+    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
+    <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
+  </a>
+  <div class="nav-right">
+    <a href="/lancamentos" class="btn-nav">Lançamentos</a>
+    <a href="/logout" class="btn-nav btn-logout">Sair</a>
+  </div>
+</nav>
+
+<main>
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+    <div class="flash-wrap">
+      <div class="flash {{ cat }}" data-flash>
+        <span>{{ msg }}</span>
+        <button class="flash-close" onclick="dismissFlash(this.parentElement)">✕</button>
+        <span class="flash-progress"></span>
+      </div>
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="head">
+    <div class="eyebrow">Controle do carro</div>
+    <h1>veículo</h1>
+    <p>{{ veiculo.apelido if veiculo else 'Nenhum veículo cadastrado' }}{% if veiculo %} · {{ veiculo.marca }} {{ veiculo.modelo }} {{ veiculo.ano }}{% endif %}</p>
+  </div>
+
+  <div class="sec-head">Resumo</div>
+  <div class="resumo">
+    <div class="rcard">
+      <div class="k">Consumo médio</div>
+      <div class="v">{{ '%.1f'|format(consumo_medio) if consumo_medio else '—' }}</div>
+      <div class="s">km/l</div>
+    </div>
+    <div class="rcard">
+      <div class="k">Abastecimentos no mês</div>
+      <div class="v">{{ qtd_mes }}</div>
+      <div class="s">{{ gasto_mes | brl }} gastos</div>
+    </div>
+  </div>
+
+  <div class="sec-head">Histórico</div>
+  {% if historico %}
+  <div class="hist">
+    {% for h in historico %}
+    <div class="hrow">
+      <div class="hrow-top">
+        <span class="hrow-data">{{ h.data.strftime('%d/%m/%Y') }}</span>
+        <span class="hrow-valor">{{ h.valor_total | brl }}</span>
+      </div>
+      <div class="hrow-grid">
+        <div><b>{{ '%.0f'|format(h.km) }} km</b>odômetro</div>
+        <div><b>{{ '%.1f'|format(h.litros) }} L</b>abastecido</div>
+        <div>
+          {% if h.consumo %}<b>{{ '%.1f'|format(h.consumo) }} km/l</b>{{ '%.0f'|format(h.km_rodados) }} km rodados
+          {% else %}<b>—</b>primeiro registro{% endif %}
+        </div>
+      </div>
+      <div class="hrow-foot">
+        <form method="POST" action="/veiculo/excluir/{{ h.id }}">
+          <button type="submit" class="hrow-del">excluir</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">Nenhum abastecimento registrado ainda.<br/>Use o chat: "abasteci 42 litros, 87450 km, R$ 320".</div>
+  {% endif %}
+
+</main>
+
+<script>
+  function dismissFlash(el) {
+    el.classList.add('hide');
+    setTimeout(() => el.closest('.flash-wrap')?.remove(), 420);
+  }
+  document.querySelectorAll('[data-flash]').forEach(el => {
+    setTimeout(() => dismissFlash(el), 4000);
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');
+  }
+</script>
+
+</body>
+</html>
