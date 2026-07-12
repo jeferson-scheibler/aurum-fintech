@@ -137,10 +137,10 @@ def _extrair_comprovante(texto):
     }
 
 
-def _extrair_extrato(pdf):
-    """Extrai as transações de um extrato de conta usando a posição das palavras.
-    Cada pedaço de descrição (que pode ficar acima/abaixo da linha da data) é
-    atribuído à transação verticalmente mais próxima. Vazio se não for um extrato."""
+def _extrair_extrato_geometria(pdf):
+    """Formato Mercado Pago: datas com hífen, descrição pode ocupar 2-3 linhas
+    acima/abaixo da linha da transação. Usa a posição (x/y) das palavras para
+    atribuir cada pedaço de descrição à transação verticalmente mais próxima."""
     itens = []
     for page in pdf.pages:
         words = page.extract_words(x_tolerance=1.5)
@@ -182,6 +182,49 @@ def _extrair_extrato(pdf):
                 'tipo_lancamento': 'despesa' if mv.group(1) == '-' else 'receita',
             })
     return itens
+
+
+LINHA_EXTRATO = re.compile(
+    r'^(\d{2})/(\d{2})/(\d{4})\s+(.+?)\s+(-?[\d.]+,\d{2})\s+[\d.]+,\d{2}\s*$'
+)
+DOC_CODIGO = re.compile(r'^([A-Z]{2,5}\d{4,}|PIX_[A-Z]+|\d{5,})$')
+
+
+def _extrair_extrato_linhas(texto):
+    """Formato uma-linha-por-transação (ex.: Sicredi): 'dd/mm/aaaa descrição
+    [documento] valor saldo' em uma única linha por lançamento."""
+    itens = []
+    for linha in texto.splitlines():
+        m = LINHA_EXTRATO.match(linha.strip())
+        if not m:
+            continue
+        dia, mes, ano, resto, valor_raw = m.groups()
+        v = _normaliza_valor_br(valor_raw.lstrip('-'))
+        if v is None:
+            continue
+
+        partes = resto.split()
+        if partes and DOC_CODIGO.match(partes[-1]):
+            partes = partes[:-1]
+        desc = ' '.join(partes).strip(' .-') or resto.strip()
+
+        itens.append({
+            'descricao': desc[:255],
+            'data_lancamento': f'{ano}-{mes}-{dia}',
+            'valor': f'{v:.2f}',
+            'tipo_lancamento': 'despesa' if valor_raw.strip().startswith('-') else 'receita',
+        })
+    return itens
+
+
+def _extrair_extrato(pdf):
+    """Tenta os parsers de extrato conhecidos e devolve o que achar mais transações."""
+    itens_geo = _extrair_extrato_geometria(pdf)
+
+    texto = ''.join((p.extract_text() or '') + '\n' for p in pdf.pages)
+    itens_linha = _extrair_extrato_linhas(texto)
+
+    return itens_geo if len(itens_geo) >= len(itens_linha) else itens_linha
 
 
 # ── CHAT: interpreta uma frase em linguagem natural (parser por regras, local) ──

@@ -16,53 +16,122 @@
       --green:#38e08f; --green-bg:rgba(56,224,143,0.10);
       --red:#ff5c5c; --red-bg:rgba(255,92,92,0.10);
     }
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    body { background:var(--bg); min-height:100vh; font-family:'DM Mono',monospace; color:var(--text); position:relative; overflow-x:hidden; padding-bottom:90px; }
-    body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px); background-size:60px 60px; opacity:.16; mask-image:radial-gradient(circle at 90% 0%,black,transparent 55%); pointer-events:none; z-index:0; }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    body { background:var(--bg); min-height:100vh; font-family:'DM Mono',monospace; color:var(--text); position:relative; overflow-x:hidden; padding-bottom:104px; }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+      background-size:60px 60px; opacity:.16;
+      mask-image:radial-gradient(circle at 90% 0%,black,transparent 55%);
+      pointer-events:none; z-index:0;
+    }
 
-    nav { position:sticky; top:0; z-index:100; background:rgba(6,6,6,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:58px; }
+    nav {
+      position:sticky; top:0; z-index:100;
+      background:rgba(6,6,6,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:58px;
+    }
     nav::after { content:''; position:absolute; left:0; bottom:-1px; height:2px; width:100%; background:linear-gradient(90deg,var(--brand) 0%,transparent 35%); opacity:.7; }
     .nav-brand { display:flex; align-items:center; gap:10px; }
     .nav-symbol { width:28px; height:28px; }
     .nav-name { font-family:'Oxanium',sans-serif; font-weight:800; font-size:20px; letter-spacing:-0.01em; text-transform:lowercase; }
-    .btn-nav { font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); text-decoration:none; border:1px solid var(--border); padding:7px 13px; clip-path:polygon(0 0,calc(100% - 7px) 0,100% 100%,7px 100%); }
+    .btn-nav {
+      font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); text-decoration:none;
+      border:1px solid var(--border); padding:7px 13px;
+      clip-path:polygon(0 0,calc(100% - 7px) 0,100% 100%,7px 100%);
+      transition:color .2s, border-color .2s;
+    }
+    .btn-nav:hover { color:var(--red); border-color:var(--red); }
 
     main { position:relative; z-index:1; max-width:640px; margin:0 auto; padding:22px 14px 40px; }
 
-    .head { margin-bottom:18px; }
+    .head { margin-bottom:20px; }
     .eyebrow { font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--brand); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
     .eyebrow::before { content:''; width:18px; height:1px; background:var(--brand); }
     .head h1 { font-family:'Oxanium',sans-serif; font-weight:800; font-size:30px; letter-spacing:-0.01em; text-transform:lowercase; line-height:1; }
-    .head p { font-size:11px; color:var(--muted); letter-spacing:.06em; margin-top:8px; line-height:1.6; }
+    .head p { font-size:11px; color:var(--muted); letter-spacing:.04em; margin-top:8px; line-height:1.6; }
+    .head p b { color:var(--text); font-weight:500; }
 
-    .toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; }
-    .toggle-all { display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); cursor:pointer; user-select:none; }
+    /* summary strip */
+    .summary { display:flex; gap:8px; margin-bottom:18px; }
+    .schip {
+      flex:1; min-width:0; background:var(--surface); border:1px solid var(--border); padding:10px 12px;
+      display:flex; flex-direction:column; gap:3px;
+    }
+    .schip .k { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+    .schip .v { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .schip.rec .v { color:var(--green); }
+    .schip.desp .v { color:var(--red); }
+    .schip.tot .v { color:var(--brand); }
+
+    /* toolbar */
+    .toolbar {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:12px; padding:0 2px;
+    }
+    .toggle-all { display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+    .toggle-all span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
     .count { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--brand); }
 
-    .rows { display:flex; flex-direction:column; gap:7px; }
-    .row {
-      display:grid; grid-template-columns:24px 1fr auto; align-items:center; gap:12px;
-      background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--tx-accent,var(--border));
-      padding:11px 14px; cursor:pointer;
+    /* custom checkbox: hidden native input + decorative box as sibling */
+    .chk { position:relative; flex:none; display:inline-flex; }
+    .chk input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+    .chk .box {
+      width:20px; height:20px; border:1px solid var(--border); background:var(--bg);
+      display:grid; place-items:center; transition:background .15s, border-color .15s;
+      clip-path:polygon(0 0,100% 0,100% 100%,5px 100%,0 calc(100% - 5px));
     }
+    .chk .box svg { width:12px; height:12px; opacity:0; transform:scale(.5); transition:opacity .1s, transform .15s; }
+    .chk input:checked + .box { background:var(--brand); border-color:var(--brand); }
+    .chk input:checked + .box svg { opacity:1; transform:scale(1); stroke:#06120a; }
+
+    /* rows */
+    .rows { display:flex; flex-direction:column; gap:8px; }
+    .row {
+      position:relative; display:flex; align-items:flex-start; gap:12px;
+      background:var(--surface); border:1px solid var(--border);
+      padding:13px 14px 13px 16px;
+      clip-path:polygon(0 0,100% 0,100% 100%,12px 100%,0 calc(100% - 12px));
+      transition:background .15s, border-color .15s, opacity .15s;
+    }
+    .row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--tx-accent,var(--border)); }
     .row.receita { --tx-accent:var(--green); }
     .row.despesa { --tx-accent:var(--red); }
-    .row input { width:17px; height:17px; accent-color:var(--brand); cursor:pointer; }
-    .row-body { min-width:0; }
-    .row-desc { font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .row-meta { font-size:10px; color:var(--muted); margin-top:3px; font-family:'JetBrains Mono',monospace; }
+    .row:has(input:not(:checked)) { opacity:.4; }
+    .row:has(input:checked):active { background:var(--surface2); }
+
+    .row-main { flex:1; min-width:0; padding-top:1px; }
+    .row-desc { font-size:13px; font-weight:500; color:var(--text); line-height:1.4; }
+    .row-foot { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:7px; }
+    .row-date { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); flex:none; }
     .row-val { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; white-space:nowrap; font-variant-numeric:tabular-nums; }
     .row.receita .row-val { color:var(--green); }
     .row.despesa .row-val { color:var(--red); }
 
+    /* bottom action bar */
     .bar {
       position:fixed; left:0; right:0; bottom:0; z-index:120;
-      background:rgba(6,6,6,.94); backdrop-filter:blur(12px); border-top:1px solid var(--border);
-      padding:12px 14px; display:flex; gap:10px; max-width:640px; margin:0 auto;
+      background:rgba(6,6,6,.95); backdrop-filter:blur(14px); border-top:1px solid var(--border);
+      padding:12px 14px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:10px;
+      max-width:640px; margin:0 auto;
     }
-    .btn-ok { flex:1; padding:14px; border:none; background:var(--brand); color:#06120a; cursor:pointer; font-family:'DM Mono',monospace; font-weight:500; font-size:11px; letter-spacing:.16em; text-transform:uppercase; clip-path:polygon(0 0,calc(100% - 12px) 0,100% 100%,12px 100%); }
-    .btn-cancel { padding:14px 18px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; }
+    .btn-ok {
+      flex:1; padding:15px; border:none; background:var(--brand); color:#06120a; cursor:pointer;
+      font-family:'Oxanium',sans-serif; font-weight:700; font-size:13px; letter-spacing:.04em; text-transform:lowercase;
+      clip-path:polygon(0 0,calc(100% - 14px) 0,100% 100%,14px 100%);
+      transition:transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+    }
+    .btn-ok:hover { transform:translateY(-1px); box-shadow:0 8px 24px -8px var(--brand-glow); }
+    .btn-cancel {
+      padding:15px 20px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer;
+      font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+      transition:color .2s, border-color .2s;
+    }
     .btn-cancel:hover { color:var(--red); border-color:var(--red); }
+
+    .empty { text-align:center; padding:60px 24px; border:1px dashed var(--border); background:var(--surface); }
+    .empty img { width:64px; opacity:.35; filter:grayscale(1) brightness(1.7); margin-bottom:16px; }
+    .empty p { font-size:11px; color:var(--muted); }
   </style>
 </head>
 <body>
@@ -79,11 +148,21 @@
   <div class="head">
     <div class="eyebrow">Importar do extrato</div>
     <h1>importar</h1>
-    <p>Encontrei <b>{{ total }}</b> transações ({{ total_rec }} receitas · {{ total_desp }} despesas). Marque as que quer registrar.</p>
+    <p>Encontrei <b>{{ total }}</b> transações neste comprovante. Desmarque o que não quiser trazer pro Bagual.</p>
   </div>
 
+  <div class="summary">
+    <div class="schip rec"><span class="k">Receitas</span><span class="v">{{ total_rec }}</span></div>
+    <div class="schip desp"><span class="k">Despesas</span><span class="v">{{ total_desp }}</span></div>
+    <div class="schip tot"><span class="k">Total</span><span class="v">{{ total }}</span></div>
+  </div>
+
+  {% if itens %}
   <div class="toolbar">
-    <label class="toggle-all"><input type="checkbox" id="all" checked onchange="toggleAll(this)"/> Selecionar todas</label>
+    <label class="toggle-all">
+      <span class="chk"><input type="checkbox" id="all" checked onchange="toggleAll(this)"/><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></span>
+      <span>Selecionar todas</span>
+    </label>
     <span class="count"><span id="cnt">{{ total }}</span> marcadas</span>
   </div>
 
@@ -91,23 +170,34 @@
     <div class="rows">
       {% for it in itens %}
       <label class="row {{ it.tipo_lancamento }}">
-        <input type="checkbox" name="sel" value="{{ loop.index0 }}" checked onchange="recount()"/>
-        <span class="row-body">
-          <span class="row-desc">{{ it.descricao }}</span>
-          <span class="row-meta">{{ it.data_lancamento[8:10] }}/{{ it.data_lancamento[5:7] }}/{{ it.data_lancamento[0:4] }}</span>
+        <span class="chk">
+          <input type="checkbox" name="sel" value="{{ loop.index0 }}" checked onchange="recount()"/>
+          <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
         </span>
-        <span class="row-val">{{ '+' if it.tipo_lancamento == 'receita' else '−' }}{{ it.valor | brl }}</span>
+        <span class="row-main">
+          <span class="row-desc">{{ it.descricao }}</span>
+          <span class="row-foot">
+            <span class="row-date">{{ it.data_lancamento[8:10] }}/{{ it.data_lancamento[5:7] }}/{{ it.data_lancamento[0:4] }}</span>
+            <span class="row-val">{{ '+' if it.tipo_lancamento == 'receita' else '−' }}{{ it.valor | brl }}</span>
+          </span>
+        </span>
       </label>
       {% endfor %}
     </div>
   </form>
   <form id="fDiscard" method="POST" action="/importar/descartar"></form>
-</main>
 
-<div class="bar">
-  <button type="submit" form="fImport" class="btn-ok">Importar selecionadas</button>
-  <button type="submit" form="fDiscard" class="btn-cancel">Descartar</button>
-</div>
+  <div class="bar">
+    <button type="submit" form="fImport" class="btn-ok">importar selecionadas</button>
+    <button type="submit" form="fDiscard" class="btn-cancel">Descartar</button>
+  </div>
+  {% else %}
+  <div class="empty">
+    <img src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bagual"/>
+    <p>Nenhuma transação pra importar. Volte e compartilhe o extrato de novo.</p>
+  </div>
+  {% endif %}
+</main>
 
 <script>
   function recount() {
