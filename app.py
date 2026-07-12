@@ -355,7 +355,7 @@ def _email_html(acao, campos):
     <td style="padding:32px 36px 24px;border-bottom:1px solid #333333;">
       <span style="font-size:22px;color:#00FF4E;font-family:Georgia,serif;font-weight:700;">&#9670;</span>
       <span style="font-size:14px;color:#FFFFFF;font-family:Georgia,serif;
-                   letter-spacing:.28em;text-transform:uppercase;margin-left:8px;">BAGUAL</span>
+                   letter-spacing:.28em;text-transform:uppercase;margin-left:8px;">BAHGOAL</span>
       <p style="margin:10px 0 0;font-size:9px;letter-spacing:.22em;
                 text-transform:uppercase;color:#8a8a8a;">Força. Velocidade. Liberdade.</p>
     </td>
@@ -379,7 +379,7 @@ def _email_html(acao, campos):
     <td style="padding:18px 36px 24px;border-top:1px solid #333333;">
       <p style="margin:0;font-size:9px;letter-spacing:.15em;
                 text-transform:uppercase;color:#8a8a8a;">
-        {datetime.now().strftime('%d/%m/%Y às %H:%M')} &nbsp;·&nbsp; Bagual
+        {datetime.now().strftime('%d/%m/%Y às %H:%M')} &nbsp;·&nbsp; Bahgoal
       </p>
     </td>
   </tr>
@@ -620,7 +620,7 @@ def chat_confirmar():
 
         flash('Lançamento registrado pelo chat.', 'ok')
         enviar_email(
-            assunto=f'[Bagual] Novo lançamento: {descricao}',
+            assunto=f'[Bahgoal] Novo lançamento: {descricao}',
             campos=dict(id=novo_id, descricao=descricao, data_lancamento=data_lancamento,
                         valor=valor, tipo_lancamento=tipo_lancamento, situacao='ativo', observacao=observacao),
             acao='criado',
@@ -700,7 +700,7 @@ def novo_lancamento():
 
                 flash('Lançamento criado com sucesso.', 'ok')
                 enviar_email(
-                    assunto=f'[Bagual] Novo lançamento: {descricao}',
+                    assunto=f'[Bahgoal] Novo lançamento: {descricao}',
                     campos=dict(id=novo_id, descricao=descricao, data_lancamento=data_lancamento,
                                 valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao, observacao=observacao),
                     acao='criado',
@@ -850,7 +850,7 @@ def editar_lancamento(id):
 
                 flash('Lançamento atualizado.', 'ok')
                 enviar_email(
-                    assunto=f'[Bagual] Lançamento atualizado: {descricao}',
+                    assunto=f'[Bahgoal] Lançamento atualizado: {descricao}',
                     campos=dict(id=id, descricao=descricao, data_lancamento=data_lancamento,
                                 valor=valor, tipo_lancamento=tipo_lancamento, situacao=situacao, observacao=observacao),
                     acao='atualizado',
@@ -889,7 +889,7 @@ def excluir_lancamento(id):
         flash('Lançamento excluído.', 'ok')
         if lancamento:
             enviar_email(
-                assunto=f'[Bagual] Lançamento excluído: {lancamento["descricao"]}',
+                assunto=f'[Bahgoal] Lançamento excluído: {lancamento["descricao"]}',
                 campos=dict(id=id, descricao=lancamento['descricao'],
                             data_lancamento=lancamento['data_lancamento'],
                             valor=lancamento['valor'],
@@ -942,7 +942,7 @@ def exportar_pdf():
 
         c.setFont('Helvetica-Bold', 22)
         c.setFillColor(GOLD)
-        c.drawString(M, PAGE_H - 18 * mm, 'BAGUAL')
+        c.drawString(M, PAGE_H - 18 * mm, 'BAHGOAL')
 
         c.setFont('Helvetica', 8)
         c.setFillColor(MUTED)
@@ -990,7 +990,7 @@ def exportar_pdf():
         c.line(M, footer_y + 4 * mm, PAGE_W - M, footer_y + 4 * mm)
         c.setFont('Helvetica', 7)
         c.setFillColor(MUTED)
-        c.drawString(M, footer_y, 'BAGUAL')
+        c.drawString(M, footer_y, 'BAHGOAL')
         c.drawRightString(PAGE_W - M, footer_y,
                           f'Gerado em {datetime.now().strftime("%d/%m/%Y as %H:%M")}')
 
@@ -1080,7 +1080,7 @@ def exportar_pdf():
     resp = make_response(buffer.read())
     resp.headers['Content-Type']        = 'application/pdf'
     resp.headers['Content-Disposition'] = \
-        f'attachment; filename="bagual_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
+        f'attachment; filename="bahgoal_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
     return resp
 
 if __name__ == '__main__':

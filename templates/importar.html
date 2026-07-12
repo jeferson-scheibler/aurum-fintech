@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="theme-color" content="#00FF4E"/>
-  <title>Bagual · Importar extrato</title>
+  <title>Bahgoal · Importar extrato</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
-  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Baumans&family=Nova+Round&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --brand:#00FF4E; --brand-dim:#0f8a34; --brand-glow:rgba(0,255,78,.4);
@@ -34,7 +34,9 @@
     nav::after { content:''; position:absolute; left:0; bottom:-1px; height:2px; width:100%; background:linear-gradient(90deg,var(--brand) 0%,transparent 35%); opacity:.7; }
     .nav-brand { display:flex; align-items:center; gap:10px; }
     .nav-symbol { width:28px; height:28px; }
-    .nav-name { font-family:'Oxanium',sans-serif; font-weight:800; font-size:20px; letter-spacing:-0.01em; text-transform:lowercase; }
+    .nav-name { display:flex; align-items:baseline; }
+    .w-bah  { font-family:'Baumans',sans-serif; font-size:20px; color:var(--brand); transform:skewX(-11deg); display:inline-block; }
+    .w-goal { font-family:'Nova Round',sans-serif; font-size:20px; letter-spacing:-0.01em; }
     .btn-nav {
       font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); text-decoration:none;
       border:1px solid var(--border); padding:7px 13px;
@@ -48,7 +50,7 @@
     .head { margin-bottom:20px; }
     .eyebrow { font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--brand); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
     .eyebrow::before { content:''; width:18px; height:1px; background:var(--brand); }
-    .head h1 { font-family:'Oxanium',sans-serif; font-weight:800; font-size:30px; letter-spacing:-0.01em; text-transform:lowercase; line-height:1; }
+    .head h1 { font-family:'Nova Round',sans-serif; font-size:30px; letter-spacing:-0.01em; text-transform:lowercase; line-height:1; }
     .head p { font-size:11px; color:var(--muted); letter-spacing:.04em; margin-top:8px; line-height:1.6; }
     .head p b { color:var(--text); font-weight:500; }
 
@@ -117,7 +119,7 @@
     }
     .btn-ok {
       flex:1; padding:15px; border:none; background:var(--brand); color:#06120a; cursor:pointer;
-      font-family:'Oxanium',sans-serif; font-weight:700; font-size:13px; letter-spacing:.04em; text-transform:lowercase;
+      font-family:'Nova Round',sans-serif; font-size:13px; letter-spacing:.04em; text-transform:lowercase;
       clip-path:polygon(0 0,calc(100% - 14px) 0,100% 100%,14px 100%);
       transition:transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
     }
@@ -138,8 +140,8 @@
 
 <nav>
   <div class="nav-brand">
-    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bagual"/>
-    <span class="nav-name">Bagual</span>
+    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
+    <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
   </div>
   <a href="/lancamentos" class="btn-nav">Cancelar</a>
 </nav>
@@ -148,7 +150,7 @@
   <div class="head">
     <div class="eyebrow">Importar do extrato</div>
     <h1>importar</h1>
-    <p>Encontrei <b>{{ total }}</b> transações neste comprovante. Desmarque o que não quiser trazer pro Bagual.</p>
+    <p>Encontrei <b>{{ total }}</b> transações neste comprovante. Desmarque o que não quiser trazer pro Bahgoal.</p>
   </div>
 
   <div class="summary">
@@ -193,7 +195,7 @@
   </div>
   {% else %}
   <div class="empty">
-    <img src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bagual"/>
+    <img src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
     <p>Nenhuma transação pra importar. Volte e compartilhe o extrato de novo.</p>
   </div>
   {% endif %}
