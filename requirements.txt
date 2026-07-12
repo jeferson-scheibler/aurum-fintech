@@ -3,6 +3,7 @@ psycopg2-binary==2.9.11
 python-dotenv==1.2.2
 reportlab==4.2.5
 pdfplumber==0.11.4
+gunicorn==23.0.0
 pytest==9.0.3
 pytest-html==4.1.1
 pytest-cov==6.0.0

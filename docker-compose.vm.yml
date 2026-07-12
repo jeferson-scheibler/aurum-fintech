@@ -1,0 +1,68 @@
+name: bagual
+
+# Deploy self-contained do Bagual para uma VM própria (ex.: ao lado de outros
+# sites atrás do Nginx). Sobe app + Postgres + migrations Flyway, expõe a app
+# numa porta configurável (APP_PORT, padrão 8083). O banco NÃO é exposto ao host.
+#
+#   docker compose -f docker-compose.vm.yml --env-file .env up -d --build
+#
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bagual_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       financas_db
+      POSTGRES_USER:     fintech
+      POSTGRES_PASSWORD: ${DB_PASS}
+    volumes:
+      - bagual_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fintech -d financas_db"]
+      interval: 5s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:10-alpine
+    container_name: bagual_flyway
+    command: migrate
+    environment:
+      FLYWAY_URL:       jdbc:postgresql://db:5432/financas_db
+      FLYWAY_USER:      fintech
+      FLYWAY_PASSWORD:  ${DB_PASS}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    volumes:
+      - ./migrations:/flyway/sql
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: bagual_app
+    restart: unless-stopped
+    # Servidor de produção (gunicorn) em vez do servidor de desenvolvimento do Flask.
+    command: ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "120", "app:app"]
+    ports:
+      # Acessível em http://IP_DA_VM:${APP_PORT}. Quando houver domínio + Nginx na
+      # frente, troque por "127.0.0.1:${APP_PORT}:5000" para não expor direto.
+      - "${APP_PORT:-8083}:5000"
+    environment:
+      DB_HOST:      db
+      DB_PORT:      5432
+      DB_NAME:      financas_db
+      DB_USER:      fintech
+      DB_PASS:      ${DB_PASS}
+      SECRET_KEY:   ${SECRET_KEY}
+      FLASK_DEBUG:  "0"
+      APP_ENV:      "producao"
+      SMTP_HOST:    ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT:    ${SMTP_PORT:-587}
+      SMTP_USUARIO: ${SMTP_USUARIO:-}
+      SMTP_SENHA:   ${SMTP_SENHA:-}
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+
+volumes:
+  bagual_db:
