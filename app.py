@@ -62,19 +62,52 @@ def login_required(f):
 
 # ── COMPROVANTES: extração de dados a partir de PDF compartilhado ──────────────
 
-def _extrair_comprovante(texto):
-    valor = None
-    m = re.search(r'valor[^\n]{0,30}?R\$\s*([\d.]{1,12},\d{2})', texto, re.IGNORECASE)
-    if not m:
-        m = re.search(r'R\$\s*([\d.]{1,12},\d{2})', texto)
-    if m:
-        valor = m.group(1).replace('.', '').replace(',', '.')
+MESES = {'janeiro': 1, 'fevereiro': 2, 'março': 3, 'marco': 3, 'abril': 4, 'maio': 5,
+         'junho': 6, 'julho': 7, 'agosto': 8, 'setembro': 9, 'outubro': 10,
+         'novembro': 11, 'dezembro': 12}
 
+
+def _normaliza_valor_br(raw):
+    """'1.234,56' -> 1234.56 ; '131' -> 131.0 ; devolve float ou None."""
+    raw = raw.strip()
+    if ',' in raw:
+        raw = raw.replace('.', '').replace(',', '.')
+    elif re.match(r'^\d{1,3}\.\d{3}$', raw):        # 1.200 (milhar) -> 1200
+        raw = raw.replace('.', '')
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def _extrair_comprovante(texto):
+    # valor: prefere "total"/"valor"; senão o primeiro R$ (centavos opcionais)
+    valor = None
+    for chave in ('total', 'valor'):
+        m = re.search(rf'{chave}[^\n]{{0,20}}?R\$\s*([\d.]{{1,12}}(?:,\d{{2}})?)', texto, re.IGNORECASE)
+        if m:
+            valor = m.group(1)
+            break
+    if valor is None:
+        m = re.search(r'R\$\s*([\d.]{1,12}(?:,\d{2})?)', texto)
+        if m:
+            valor = m.group(1)
+    if valor is not None:
+        v = _normaliza_valor_br(valor)
+        valor = f'{v:.2f}' if v is not None else None
+
+    # data: dd/mm/aaaa, dd-mm-aaaa, ou "DD de mês de AAAA"; senão hoje
     data_lancamento = None
-    m = re.search(r'(\d{2})/(\d{2})/(\d{4})', texto)
+    m = re.search(r'(\d{2})[/-](\d{2})[/-](\d{4})', texto)
     if m:
         dia, mes, ano = m.groups()
         data_lancamento = f'{ano}-{mes}-{dia}'
+    else:
+        m = re.search(r'(\d{1,2})\s+de\s+([A-Za-zçÇ]+)\s+de\s+(\d{4})', texto)
+        if m and m.group(2).lower() in MESES:
+            data_lancamento = f'{m.group(3)}-{MESES[m.group(2).lower()]:02d}-{int(m.group(1)):02d}'
+    if not data_lancamento:
+        data_lancamento = datetime.now().strftime('%Y-%m-%d')
 
     texto_lower = texto.lower()
     if 'pix' in texto_lower:
@@ -95,13 +128,60 @@ def _extrair_comprovante(texto):
 
     return {
         'descricao': descricao,
-        'data_lancamento': data_lancamento or '',
+        'data_lancamento': data_lancamento,
         'valor': valor or '',
         'tipo_lancamento': 'despesa',
         'situacao': 'ativo',
         'observacao': ' '.join(texto.split())[:140],
         'valor_encontrado': valor is not None,
     }
+
+
+def _extrair_extrato(pdf):
+    """Extrai as transações de um extrato de conta usando a posição das palavras.
+    Cada pedaço de descrição (que pode ficar acima/abaixo da linha da data) é
+    atribuído à transação verticalmente mais próxima. Vazio se não for um extrato."""
+    itens = []
+    for page in pdf.pages:
+        words = page.extract_words(x_tolerance=1.5)
+
+        # âncoras = datas na coluna "Data" (x0 pequeno)
+        anchors = [{'top': w['top'], 'date': w['text'], 'desc': [], 'val': []}
+                   for w in words
+                   if w['x0'] < 88 and re.match(r'^\d{2}-\d{2}-\d{4}$', w['text'])]
+        if not anchors:
+            continue
+
+        def mais_proxima(w):
+            return min(anchors, key=lambda a: abs(a['top'] - w['top']))
+
+        for w in words:
+            if 85 <= w['x0'] < 196:                         # coluna Descrição
+                a = mais_proxima(w)
+                if abs(a['top'] - w['top']) <= 18:
+                    a['desc'].append(w)
+            elif 285 <= w['x0'] < 362:                      # coluna Valor
+                a = mais_proxima(w)
+                if abs(a['top'] - w['top']) <= 6:
+                    a['val'].append(w)
+
+        for a in anchors:
+            desc = ' '.join(x['text'] for x in sorted(a['desc'], key=lambda x: (round(x['top']), x['x0']))).strip()
+            valtxt = ' '.join(x['text'] for x in sorted(a['val'], key=lambda x: x['x0']))
+            mv = re.search(r'(-?)\s*([\d.]+,\d{2})', valtxt)
+            if not desc or not mv:
+                continue
+            v = _normaliza_valor_br(mv.group(2))
+            if v is None:
+                continue
+            dia, mes, ano = a['date'].split('-')
+            itens.append({
+                'descricao': desc[:255],
+                'data_lancamento': f'{ano}-{mes}-{dia}',
+                'valor': f'{v:.2f}',
+                'tipo_lancamento': 'despesa' if mv.group(1) == '-' else 'receita',
+            })
+    return itens
 
 
 # ── CHAT: interpreta uma frase em linguagem natural (parser por regras, local) ──
@@ -604,10 +684,15 @@ def compartilhar():
         return redirect(url_for('novo_lancamento'))
 
     try:
-        texto = ''
         with pdfplumber.open(BytesIO(arquivo.read())) as pdf:
-            for pagina in pdf.pages:
-                texto += (pagina.extract_text() or '') + '\n'
+            # Extrato (várias transações)? Se sim, vai pra tela de importação.
+            itens = _extrair_extrato(pdf)
+            if len(itens) >= 2:
+                session['extrato'] = itens
+                return redirect(url_for('importar_extrato'))
+
+            # Senão, trata como comprovante de uma transação (pré-preenche o form).
+            texto = ''.join((pagina.extract_text() or '') + '\n' for pagina in pdf.pages)
 
         dados = _extrair_comprovante(texto)
         if not dados['valor_encontrado']:
@@ -618,6 +703,74 @@ def compartilhar():
         flash('Não consegui ler o comprovante compartilhado. Preencha manualmente.', 'erro')
 
     return redirect(url_for('novo_lancamento'))
+
+
+@app.route('/importar', methods=['GET', 'POST'])
+@login_required
+def importar_extrato():
+    itens = session.get('extrato')
+    if not itens:
+        return redirect(url_for('lancamentos'))
+
+    if request.method == 'POST':
+        selecionados = request.form.getlist('sel')
+        indices = {int(i) for i in selecionados if i.isdigit()}
+        escolhidos = [it for n, it in enumerate(itens) if n in indices]
+
+        if not escolhidos:
+            flash('Nenhuma transação selecionada.', 'erro')
+            return redirect(url_for('importar_extrato'))
+
+        try:
+            conn = get_conn()
+            cur  = conn.cursor()
+
+            # deduplicação: ignora transações já existentes (mesma data+valor+tipo+descrição)
+            cur.execute("SELECT descricao, data_lancamento, valor, tipo_lancamento FROM lancamento")
+            existentes = {(d, str(dt), float(v), t) for (d, dt, v, t) in cur.fetchall()}
+
+            novos = []
+            for it in escolhidos:
+                chave = (it['descricao'], it['data_lancamento'], float(it['valor']), it['tipo_lancamento'])
+                if chave not in existentes:
+                    novos.append(it)
+                    existentes.add(chave)          # evita duplicar dentro do próprio lote
+
+            if novos:
+                cur.executemany(
+                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
+                       VALUES (%s, %s, %s, %s, 'ativo', %s)""",
+                    [(it['descricao'], it['data_lancamento'], float(it['valor']),
+                      it['tipo_lancamento'], 'Importado do extrato') for it in novos]
+                )
+                conn.commit()
+            cur.close()
+            conn.close()
+            session.pop('extrato', None)
+
+            dup = len(escolhidos) - len(novos)
+            if not novos:
+                flash(f'As {len(escolhidos)} transações selecionadas já haviam sido importadas.', 'erro')
+            elif dup:
+                flash(f'{len(novos)} lançamento(s) importado(s) · {dup} já existiam (ignorados).', 'ok')
+            else:
+                flash(f'{len(novos)} lançamento(s) importado(s) do extrato.', 'ok')
+            return redirect(url_for('lancamentos'))
+        except Exception as e:
+            flash(f'Erro ao importar: {e}', 'erro')
+            return redirect(url_for('importar_extrato'))
+
+    total_rec = sum(1 for it in itens if it['tipo_lancamento'] == 'receita')
+    return render_template('importar.html', itens=itens,
+                           total=len(itens), total_rec=total_rec, total_desp=len(itens) - total_rec,
+                           usuario_nome=session.get('usuario_nome'))
+
+
+@app.route('/importar/descartar', methods=['POST'])
+@login_required
+def importar_descartar():
+    session.pop('extrato', None)
+    return redirect(url_for('lancamentos'))
 
 
 # ── EDITAR ─────────────────────────────────────────────────────────────────────

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#00FF4E"/>
+  <title>Bagual · Importar extrato</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand:#00FF4E; --brand-dim:#0f8a34; --brand-glow:rgba(0,255,78,.4);
+      --bg:#060606; --surface:#141414; --surface2:#1c1c1c; --border:#2a2a2a;
+      --text:#f2f2ec; --muted:#8a8a85;
+      --green:#38e08f; --green-bg:rgba(56,224,143,0.10);
+      --red:#ff5c5c; --red-bg:rgba(255,92,92,0.10);
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); min-height:100vh; font-family:'DM Mono',monospace; color:var(--text); position:relative; overflow-x:hidden; padding-bottom:90px; }
+    body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px); background-size:60px 60px; opacity:.16; mask-image:radial-gradient(circle at 90% 0%,black,transparent 55%); pointer-events:none; z-index:0; }
+
+    nav { position:sticky; top:0; z-index:100; background:rgba(6,6,6,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:58px; }
+    nav::after { content:''; position:absolute; left:0; bottom:-1px; height:2px; width:100%; background:linear-gradient(90deg,var(--brand) 0%,transparent 35%); opacity:.7; }
+    .nav-brand { display:flex; align-items:center; gap:10px; }
+    .nav-symbol { width:28px; height:28px; }
+    .nav-name { font-family:'Oxanium',sans-serif; font-weight:800; font-size:20px; letter-spacing:-0.01em; text-transform:lowercase; }
+    .btn-nav { font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); text-decoration:none; border:1px solid var(--border); padding:7px 13px; clip-path:polygon(0 0,calc(100% - 7px) 0,100% 100%,7px 100%); }
+
+    main { position:relative; z-index:1; max-width:640px; margin:0 auto; padding:22px 14px 40px; }
+
+    .head { margin-bottom:18px; }
+    .eyebrow { font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--brand); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .eyebrow::before { content:''; width:18px; height:1px; background:var(--brand); }
+    .head h1 { font-family:'Oxanium',sans-serif; font-weight:800; font-size:30px; letter-spacing:-0.01em; text-transform:lowercase; line-height:1; }
+    .head p { font-size:11px; color:var(--muted); letter-spacing:.06em; margin-top:8px; line-height:1.6; }
+
+    .toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; }
+    .toggle-all { display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); cursor:pointer; user-select:none; }
+    .count { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--brand); }
+
+    .rows { display:flex; flex-direction:column; gap:7px; }
+    .row {
+      display:grid; grid-template-columns:24px 1fr auto; align-items:center; gap:12px;
+      background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--tx-accent,var(--border));
+      padding:11px 14px; cursor:pointer;
+    }
+    .row.receita { --tx-accent:var(--green); }
+    .row.despesa { --tx-accent:var(--red); }
+    .row input { width:17px; height:17px; accent-color:var(--brand); cursor:pointer; }
+    .row-body { min-width:0; }
+    .row-desc { font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .row-meta { font-size:10px; color:var(--muted); margin-top:3px; font-family:'JetBrains Mono',monospace; }
+    .row-val { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .row.receita .row-val { color:var(--green); }
+    .row.despesa .row-val { color:var(--red); }
+
+    .bar {
+      position:fixed; left:0; right:0; bottom:0; z-index:120;
+      background:rgba(6,6,6,.94); backdrop-filter:blur(12px); border-top:1px solid var(--border);
+      padding:12px 14px; display:flex; gap:10px; max-width:640px; margin:0 auto;
+    }
+    .btn-ok { flex:1; padding:14px; border:none; background:var(--brand); color:#06120a; cursor:pointer; font-family:'DM Mono',monospace; font-weight:500; font-size:11px; letter-spacing:.16em; text-transform:uppercase; clip-path:polygon(0 0,calc(100% - 12px) 0,100% 100%,12px 100%); }
+    .btn-cancel { padding:14px 18px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; }
+    .btn-cancel:hover { color:var(--red); border-color:var(--red); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bagual"/>
+    <span class="nav-name">Bagual</span>
+  </div>
+  <a href="/lancamentos" class="btn-nav">Cancelar</a>
+</nav>
+
+<main>
+  <div class="head">
+    <div class="eyebrow">Importar do extrato</div>
+    <h1>importar</h1>
+    <p>Encontrei <b>{{ total }}</b> transações ({{ total_rec }} receitas · {{ total_desp }} despesas). Marque as que quer registrar.</p>
+  </div>
+
+  <div class="toolbar">
+    <label class="toggle-all"><input type="checkbox" id="all" checked onchange="toggleAll(this)"/> Selecionar todas</label>
+    <span class="count"><span id="cnt">{{ total }}</span> marcadas</span>
+  </div>
+
+  <form id="fImport" method="POST" action="/importar">
+    <div class="rows">
+      {% for it in itens %}
+      <label class="row {{ it.tipo_lancamento }}">
+        <input type="checkbox" name="sel" value="{{ loop.index0 }}" checked onchange="recount()"/>
+        <span class="row-body">
+          <span class="row-desc">{{ it.descricao }}</span>
+          <span class="row-meta">{{ it.data_lancamento[8:10] }}/{{ it.data_lancamento[5:7] }}/{{ it.data_lancamento[0:4] }}</span>
+        </span>
+        <span class="row-val">{{ '+' if it.tipo_lancamento == 'receita' else '−' }}{{ it.valor | brl }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </form>
+  <form id="fDiscard" method="POST" action="/importar/descartar"></form>
+</main>
+
+<div class="bar">
+  <button type="submit" form="fImport" class="btn-ok">Importar selecionadas</button>
+  <button type="submit" form="fDiscard" class="btn-cancel">Descartar</button>
+</div>
+
+<script>
+  function recount() {
+    const total = document.querySelectorAll('input[name="sel"]').length;
+    const marcadas = document.querySelectorAll('input[name="sel"]:checked').length;
+    document.getElementById('cnt').textContent = marcadas;
+    document.getElementById('all').checked = (marcadas === total);
+  }
+  function toggleAll(cb) {
+    document.querySelectorAll('input[name="sel"]').forEach(el => el.checked = cb.checked);
+    recount();
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');
+  }
+</script>
+
+</body>
+</html>
