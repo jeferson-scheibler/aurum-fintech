@@ -69,6 +69,9 @@
     h1 { font-family: 'Clash Display', sans-serif; font-size: 34px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 10px; }
     .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 34px; }
 
+    .pw-title { font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); margin-bottom: 22px; display: flex; align-items: center; gap: 8px; }
+    .pw-title::before { content: ''; width: 16px; height: 1px; background: var(--brand); }
+
     .card {
       background: var(--surface); border: 1px solid var(--border);
       padding: 36px 36px 32px; position: relative;
@@ -177,6 +180,32 @@
       <div class="form-actions">
         <a href="/lancamentos" class="btn-voltar">Voltar</a>
         <button type="submit" class="btn-submit">Salvar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <div class="pw-title">Alterar senha</div>
+
+    {% if ok_senha   %}<div class="msg ok">{{ ok_senha }}</div>{% endif %}
+    {% if erro_senha %}<div class="msg erro">{{ erro_senha }}</div>{% endif %}
+
+    <form method="POST" action="/perfil/senha">
+      <div class="form-row">
+        <label for="senha_atual">Senha atual</label>
+        <input type="password" id="senha_atual" name="senha_atual" required placeholder="••••••••"/>
+      </div>
+      <div class="form-row">
+        <label for="senha_nova">Nova senha</label>
+        <input type="password" id="senha_nova" name="senha_nova" required minlength="6" placeholder="ao menos 6 caracteres"/>
+      </div>
+      <div class="form-row">
+        <label for="senha_confirma">Confirmar nova senha</label>
+        <input type="password" id="senha_confirma" name="senha_confirma" required minlength="6" placeholder="repita a nova senha"/>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-submit">Alterar senha</button>
       </div>
     </form>
   </div>

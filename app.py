@@ -16,7 +16,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle, Paragraph, Frame
 
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from dotenv import load_dotenv
 import os
@@ -325,6 +325,44 @@ def perfil():
                            usuario_nome=session.get('usuario_nome'),
                            usuario_email=session.get('usuario_email', ''),
                            erro=erro, ok=ok)
+
+
+@app.route('/perfil/senha', methods=['POST'])
+@login_required
+def alterar_senha():
+    atual    = request.form.get('senha_atual', '')
+    nova     = request.form.get('senha_nova', '')
+    confirma = request.form.get('senha_confirma', '')
+    ok_senha = None
+    erro_senha = None
+    try:
+        conn = get_conn()
+        cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT senha FROM usuario WHERE id = %s", (session['usuario_id'],))
+        row = cur.fetchone()
+
+        if not row or not check_password_hash(row['senha'], atual):
+            erro_senha = 'Senha atual incorreta.'
+        elif len(nova) < 6:
+            erro_senha = 'A nova senha deve ter ao menos 6 caracteres.'
+        elif nova != confirma:
+            erro_senha = 'A confirmação não corresponde à nova senha.'
+        else:
+            cur.execute("UPDATE usuario SET senha = %s WHERE id = %s",
+                        (generate_password_hash(nova), session['usuario_id']))
+            conn.commit()
+            ok_senha = 'Senha alterada com sucesso.'
+
+        cur.close()
+        conn.close()
+    except Exception as e:
+        erro_senha = f'Erro ao alterar a senha: {e}'
+
+    return render_template('perfil.html',
+                           usuario_nome=session.get('usuario_nome'),
+                           usuario_email=session.get('usuario_email', ''),
+                           erro=None, ok=None,
+                           erro_senha=erro_senha, ok_senha=ok_senha)
 
 
 # ── LISTAR ─────────────────────────────────────────────────────────────────────
