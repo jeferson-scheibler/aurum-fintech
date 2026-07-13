@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="theme-color" content="#00FF4E"/>
   <meta name="color-scheme" content="dark"/>
   <title>Bahgoal · Chat</title>
@@ -31,23 +31,18 @@
       position: sticky; top: 0; z-index: 100;
       background: rgba(6,6,6,0.92); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 16px; height: 58px;
+      display: flex; align-items: center; gap: 10px;
+      padding: env(safe-area-inset-top) 8px 0; height: calc(56px + env(safe-area-inset-top));
     }
     nav::after { content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; background: linear-gradient(90deg, var(--brand) 0%, transparent 35%); opacity: .7; }
-    .nav-brand { display: flex; align-items: center; gap: 10px; }
-    .nav-symbol { width: 28px; height: 28px; }
-    .nav-name   { display: flex; align-items: baseline; }
-    .w-bah  { font-family: 'Baumans', sans-serif; font-size: 20px; color: var(--brand); transform: skewX(-11deg); display: inline-block; }
-    .w-goal { font-family: 'Nova Round', sans-serif; font-size: 20px; letter-spacing: -0.01em; }
-    .nav-right  { display: flex; align-items: center; gap: 8px; }
-    .btn-nav {
-      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-decoration: none;
-      border: 1px solid var(--border); padding: 7px 13px;
-      clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 100%, 7px 100%);
-      transition: color .2s, border-color .2s;
+    .back-btn {
+      display: flex; align-items: center; justify-content: center; flex: none;
+      width: 38px; height: 38px; color: var(--text); text-decoration: none;
+      border-radius: 50%; transition: background .2s;
     }
-    .btn-nav:hover { color: var(--brand); border-color: var(--brand-dim); }
+    .back-btn:hover { background: var(--surface2); }
+    .back-btn svg { width: 22px; height: 22px; }
+    .nav-title { font-family: 'Oxanium', sans-serif; font-weight: 700; font-size: 15px; text-transform: lowercase; letter-spacing: -0.01em; }
 
     main { position: relative; z-index: 1; max-width: 620px; margin: 0 auto; padding: 24px 14px 48px; }
 
@@ -134,16 +129,10 @@
 <body>
 
 <nav>
-  <a href="/home" class="nav-brand" style="text-decoration:none;color:inherit;">
-    <img class="nav-symbol" src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt="Bahgoal"/>
-    <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
+  <a href="/lancamentos" class="back-btn" aria-label="Voltar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </a>
-  <div class="nav-right">
-    <a href="/veiculo" class="btn-nav">Veículo</a>
-    <a href="/bens" class="btn-nav">Bens</a>
-    <a href="/lancamentos" class="btn-nav">Lançamentos</a>
-    <a href="/logout" class="btn-nav">Sair</a>
-  </div>
+  <span class="nav-title">chat</span>
 </nav>
 
 <main>
