@@ -401,6 +401,23 @@ def _interpretar_movimentacao(texto):
     }
 
 
+def _reclassificar_investimento(conn, descricao, tipo_lancamento):
+    """Se a descrição menciona "investimento" e o lançamento é receita/despesa,
+    trata como transferência pro/do bem de investimento (não é ganho nem gasto
+    real). Usado no formulário manual e na importação de extrato — o chat já
+    lida com isso num fluxo próprio (_interpretar_movimentacao)."""
+    if tipo_lancamento not in ('receita', 'despesa') or 'investimento' not in descricao.lower():
+        return tipo_lancamento, None, None
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM bem WHERE tipo = 'investimento' AND auto = TRUE LIMIT 1")
+    row = cur.fetchone()
+    cur.close()
+    if not row:
+        return tipo_lancamento, None, None
+    direcao = 'entrada' if tipo_lancamento == 'despesa' else 'saida'
+    return 'movimentacao', direcao, row[0]
+
+
 # ── CATEGORIAS: classificação automática e aprendizado por reforço manual ──────
 
 CATEGORIAS_KEYWORDS = {
@@ -651,10 +668,20 @@ def _buscar_lancamentos(filtros):
 
 
 def _calcular_totais(registros):
+    """Saldo = dinheiro de verdade em caixa. Receita soma, despesa subtrai, e uma
+    movimentação de investimento também precisa entrar na conta: 'entrada' é
+    dinheiro que saiu do caixa pro investimento (subtrai), 'saida' é dinheiro que
+    voltou pro caixa (soma) — senão o valor investido fica contado duas vezes
+    (uma no saldo, outra na tela de Bens)."""
     ativos         = [r for r in registros if r['situacao'] == 'ativo']
     total_receitas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'receita')
     total_despesas = sum(r['valor'] for r in ativos if r['tipo_lancamento'] == 'despesa')
-    return total_receitas, total_despesas, total_receitas - total_despesas
+    net_investido  = sum(
+        r['valor'] if r['direcao'] == 'entrada' else -r['valor']
+        for r in ativos if r['tipo_lancamento'] == 'movimentacao'
+    )
+    saldo = total_receitas - total_despesas - net_investido
+    return total_receitas, total_despesas, saldo
 
 
 # ── HOME: metas e insights ──────────────────────────────────────────────────────
@@ -709,11 +736,22 @@ def _progresso_metas(conn):
                 'status': status, 'data_alvo': None, 'dias_restantes': None,
             })
         else:
+            # progresso = dinheiro de verdade acumulado desde o início da meta;
+            # uma movimentação pro investimento tira dinheiro do caixa (senão
+            # ficaria contando como "economizado" aqui e como "investido" na
+            # aba Bens ao mesmo tempo).
             cur.execute(
-                """SELECT COALESCE(SUM(CASE WHEN tipo_lancamento = 'receita' THEN valor ELSE -valor END), 0)
+                """SELECT COALESCE(SUM(
+                       CASE
+                           WHEN tipo_lancamento = 'receita' THEN valor
+                           WHEN tipo_lancamento = 'despesa' THEN -valor
+                           WHEN tipo_lancamento = 'movimentacao' AND direcao = 'entrada' THEN -valor
+                           WHEN tipo_lancamento = 'movimentacao' AND direcao = 'saida' THEN valor
+                           ELSE 0
+                       END
+                   ), 0)
                    FROM lancamento
-                   WHERE situacao = 'ativo' AND tipo_lancamento IN ('receita', 'despesa')
-                     AND data_lancamento >= %s""",
+                   WHERE situacao = 'ativo' AND data_lancamento >= %s""",
                 (m['data_inicio'],)
             )
             progresso = max(float(cur.fetchone()[0]), 0)
@@ -1260,10 +1298,22 @@ def bens():
                 valor = float(b['valor'])
             lista.append({'id': b['id'], 'nome': b['nome'], 'tipo': b['tipo'], 'valor': valor, 'auto': b['auto']})
 
+        # dinheiro de verdade em caixa: receita soma, despesa subtrai, e uma
+        # movimentação também mexe no caixa de verdade (entrada = saiu pro
+        # investimento, saida = voltou) — senão o valor investido conta duas
+        # vezes (aqui e na aba "Investido" acima).
         cur2.execute(
-            """SELECT COALESCE(SUM(CASE WHEN tipo_lancamento = 'receita' THEN valor ELSE -valor END), 0)
+            """SELECT COALESCE(SUM(
+                   CASE
+                       WHEN tipo_lancamento = 'receita' THEN valor
+                       WHEN tipo_lancamento = 'despesa' THEN -valor
+                       WHEN tipo_lancamento = 'movimentacao' AND direcao = 'entrada' THEN -valor
+                       WHEN tipo_lancamento = 'movimentacao' AND direcao = 'saida' THEN valor
+                       ELSE 0
+                   END
+               ), 0)
                FROM lancamento
-               WHERE situacao = 'ativo' AND tipo_lancamento IN ('receita', 'despesa')"""
+               WHERE situacao = 'ativo'"""
         )
         caixa = float(cur2.fetchone()[0])
         cur2.close()
@@ -1380,14 +1430,16 @@ def novo_lancamento():
             try:
                 conn = get_conn()
                 cur  = conn.cursor()
-                categoria_id = _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
+                tipo_lancamento, direcao, bem_id = _reclassificar_investimento(conn, descricao, tipo_lancamento)
+                categoria_id = None if tipo_lancamento == 'movimentacao' else _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
                 cur.execute(
-                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, categoria_id)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, categoria_id)
+                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, categoria_id, bem_id, direcao)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, categoria_id, bem_id, direcao)
                 )
                 novo_id = cur.fetchone()[0]
-                _aprender_categoria(conn, descricao, categoria_id)
+                if tipo_lancamento != 'movimentacao':
+                    _aprender_categoria(conn, descricao, categoria_id)
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -1468,24 +1520,14 @@ def importar_extrato():
             conn = get_conn()
             cur  = conn.cursor()
 
-            # transferências pra investimento ("reservado"/"retirado") não são receita/despesa
-            cur.execute("SELECT id FROM bem WHERE tipo = 'investimento' AND auto = TRUE LIMIT 1")
-            row = cur.fetchone()
-            bem_investimento_id = row[0] if row else None
-
             # deduplicação: ignora transações já existentes (mesma data+valor+tipo+descrição)
             cur.execute("SELECT descricao, data_lancamento, valor, tipo_lancamento FROM lancamento")
             existentes = {(d, str(dt), float(v), t) for (d, dt, v, t) in cur.fetchall()}
 
             novos = []
             for it in escolhidos:
-                tipo, direcao, bem_id, categoria_id = it['tipo_lancamento'], None, None, None
-                if bem_investimento_id and 'investimento' in it['descricao'].lower():
-                    direcao = 'entrada' if tipo == 'despesa' else 'saida'
-                    bem_id  = bem_investimento_id
-                    tipo    = 'movimentacao'
-                else:
-                    categoria_id = _sugerir_categoria(conn, it['descricao'])
+                tipo, direcao, bem_id = _reclassificar_investimento(conn, it['descricao'], it['tipo_lancamento'])
+                categoria_id = None if tipo == 'movimentacao' else _sugerir_categoria(conn, it['descricao'])
 
                 chave = (it['descricao'], it['data_lancamento'], float(it['valor']), tipo)
                 if chave not in existentes:
@@ -1553,15 +1595,17 @@ def editar_lancamento(id):
             erro = 'Preencha todos os campos obrigatórios.'
         else:
             try:
-                categoria_id = _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
+                tipo_lancamento, direcao, bem_id = _reclassificar_investimento(conn, descricao, tipo_lancamento)
+                categoria_id = None if tipo_lancamento == 'movimentacao' else _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
                 cur.execute(
                     """UPDATE lancamento
                        SET descricao=%s, data_lancamento=%s, valor=%s,
-                           tipo_lancamento=%s, situacao=%s, observacao=%s, categoria_id=%s
+                           tipo_lancamento=%s, situacao=%s, observacao=%s, categoria_id=%s, bem_id=%s, direcao=%s
                        WHERE id=%s""",
-                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, categoria_id, id)
+                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, categoria_id, bem_id, direcao, id)
                 )
-                _aprender_categoria(conn, descricao, categoria_id)
+                if tipo_lancamento != 'movimentacao':
+                    _aprender_categoria(conn, descricao, categoria_id)
                 conn.commit()
                 cur.close()
                 conn.close()
