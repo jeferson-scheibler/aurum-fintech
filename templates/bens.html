@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="theme-color" content="#00FF4E"/>
   <meta name="color-scheme" content="dark"/>
-  <title>Bahgoal · Veículo</title>
+  <title>Bahgoal · Bens</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
   <link href="https://fonts.googleapis.com/css2?family=Baumans&family=Nova+Round&family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
@@ -24,6 +24,8 @@
       --green-bg:  rgba(56,224,143,0.10);
       --red:       #ff5c5c;
       --red-bg:    rgba(255,92,92,0.10);
+      --blue:      #5b9bd5;
+      --blue-bg:   rgba(91,155,213,0.10);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -96,47 +98,71 @@
     .head p { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
     .head { margin-bottom: 20px; }
 
-    .sec-head { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); margin: 24px 0 10px; }
-
-    /* ── resumo ── */
-    .resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .rcard {
-      background: var(--surface); border: 1px solid var(--border); padding: 14px 14px 12px;
-      clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
-    }
-    .rcard.full { grid-column: 1 / -1; }
-    .rcard .k { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .rcard .v { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 19px; color: var(--brand); }
-    .rcard .s { font-size: 10px; color: var(--muted); margin-top: 5px; }
-
-    /* ── histórico ── */
-    .hist { display: flex; flex-direction: column; gap: 9px; }
-    .hrow {
+    /* ── patrimônio total ── */
+    .total-card {
       position: relative; background: var(--surface); border: 1px solid var(--border);
-      padding: 14px 16px 12px;
+      padding: 20px 22px 18px; margin-bottom: 22px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    }
+    .total-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--brand), transparent 60%); box-shadow: 0 0 14px var(--brand-glow); }
+    .total-card .k { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
+    .total-card .v { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: clamp(32px, 9vw, 44px); color: var(--brand); margin-top: 10px; text-shadow: 0 0 24px var(--brand-glow); }
+
+    .sec-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); margin: 24px 0 10px; }
+    .sec-head .a { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand); background: none; border: none; cursor: pointer; font-family: 'DM Mono', monospace; }
+
+    /* ── lista de bens ── */
+    .bens { display: flex; flex-direction: column; gap: 9px; }
+    .bcard {
+      position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 14px 16px;
       clip-path: polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px));
     }
-    .hrow::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--brand-dim); }
-    .hrow-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-    .hrow-data { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
-    .hrow-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: var(--red); }
-    .hrow-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10.5px; color: var(--muted); }
-    .hrow-grid b { display: block; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 2px; }
-    .hrow-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
-    .hrow-del {
+    .bcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--blue); }
+    .bcard.imovel::before  { background: var(--brand-dim); }
+    .bcard.veiculo::before { background: var(--muted); }
+    .bcard.outro::before   { background: var(--muted); }
+    .bcard-left { min-width: 0; }
+    .bcard-nome { font-size: 13px; font-weight: 500; color: var(--text); }
+    .bcard-tag {
+      font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+      border: 1px solid var(--border); padding: 2px 7px; margin-top: 6px; display: inline-block;
+    }
+    .bcard-tag.auto { color: var(--blue); border-color: rgba(91,155,213,.3); }
+    .bcard-right { display: flex; align-items: center; gap: 12px; flex: none; }
+    .bcard-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; white-space: nowrap; }
+    .bcard-del {
       background: none; border: none; color: var(--muted); cursor: pointer;
       font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: underline;
     }
-    .hrow-del:hover { color: var(--red); }
+    .bcard-del:hover { color: var(--red); }
 
     .empty {
-      text-align: center; padding: 40px 20px; border: 1px dashed var(--border);
+      text-align: center; padding: 30px 20px; border: 1px dashed var(--border);
       color: var(--muted); font-size: 11px; letter-spacing: 0.03em; line-height: 1.7;
     }
 
+    /* ── novo bem ── */
+    .bem-form { display: none; background: var(--surface); border: 1px solid var(--border); padding: 16px; margin-top: 10px; }
+    .bem-form.open { display: block; }
+    .bem-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .bem-form .fg { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .bem-form label { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+    .bem-form input, .bem-form select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-left: 2px solid var(--border);
+      color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 10px 11px; outline: none;
+      appearance: none;
+    }
+    .bem-form input:focus, .bem-form select:focus { border-left-color: var(--brand); }
+    .bem-form button {
+      width: 100%; padding: 12px; border: none; background: var(--brand); color: #06120a; cursor: pointer;
+      font-family: 'DM Mono', monospace; font-weight: 500; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 10px 100%);
+    }
+
     @media (max-width: 400px) {
-      .resumo { grid-template-columns: 1fr; }
-      .hrow-grid { grid-template-columns: 1fr 1fr; }
+      .bem-form .row2 { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -148,7 +174,6 @@
     <span class="nav-name"><span class="w-bah">bah</span><span class="w-goal">goal</span></span>
   </a>
   <div class="nav-right">
-    <a href="/bens" class="btn-nav">Bens</a>
     <a href="/lancamentos" class="btn-nav">Lançamentos</a>
     <a href="/logout" class="btn-nav btn-logout">Sair</a>
   </div>
@@ -169,53 +194,69 @@
   {% endwith %}
 
   <div class="head">
-    <div class="eyebrow">Controle do carro</div>
-    <h1>veículo</h1>
-    <p>{{ veiculo.apelido if veiculo else 'Nenhum veículo cadastrado' }}{% if veiculo %} · {{ veiculo.marca }} {{ veiculo.modelo }} {{ veiculo.ano }}{% endif %}</p>
+    <div class="eyebrow">Patrimônio</div>
+    <h1>bens</h1>
+    <p>Imóveis, investimentos e outros bens.</p>
   </div>
 
-  <div class="sec-head">Resumo</div>
-  <div class="resumo">
-    <div class="rcard">
-      <div class="k">Consumo médio</div>
-      <div class="v">{{ '%.1f'|format(consumo_medio) if consumo_medio else '—' }}</div>
-      <div class="s">km/l</div>
-    </div>
-    <div class="rcard">
-      <div class="k">Abastecimentos no mês</div>
-      <div class="v">{{ qtd_mes }}</div>
-      <div class="s">{{ gasto_mes | brl }} gastos</div>
-    </div>
+  <div class="total-card">
+    <div class="k">Patrimônio total</div>
+    <div class="v">{{ total | brl }}</div>
   </div>
 
-  <div class="sec-head">Histórico</div>
-  {% if historico %}
-  <div class="hist">
-    {% for h in historico %}
-    <div class="hrow">
-      <div class="hrow-top">
-        <span class="hrow-data">{{ h.data.strftime('%d/%m/%Y') }}</span>
-        <span class="hrow-valor">{{ h.valor_total | brl }}</span>
+  <div class="sec-head">
+    <span>Seus bens</span>
+    <button type="button" class="a" onclick="toggleBemForm()">+ Novo bem</button>
+  </div>
+
+  {% if bens %}
+  <div class="bens">
+    {% for b in bens %}
+    <div class="bcard {{ b.tipo }}">
+      <div class="bcard-left">
+        <div class="bcard-nome">{{ b.nome }}</div>
+        <span class="bcard-tag {{ 'auto' if b.auto }}">
+          {{ 'atualizado automaticamente' if b.auto else b.tipo }}
+        </span>
       </div>
-      <div class="hrow-grid">
-        <div><b>{{ '%.0f'|format(h.km) }} km</b>odômetro</div>
-        <div><b>{{ '%.1f'|format(h.litros) }} L</b>abastecido</div>
-        <div>
-          {% if h.consumo %}<b>{{ '%.1f'|format(h.consumo) }} km/l</b>{{ '%.0f'|format(h.km_rodados) }} km rodados
-          {% else %}<b>—</b>primeiro registro{% endif %}
-        </div>
-      </div>
-      <div class="hrow-foot">
-        <form method="POST" action="/veiculo/excluir/{{ h.id }}">
-          <button type="submit" class="hrow-del">excluir</button>
+      <div class="bcard-right">
+        <span class="bcard-valor">{{ b.valor | brl }}</span>
+        {% if not b.auto %}
+        <form method="POST" action="/bens/excluir/{{ b.id }}">
+          <button type="submit" class="bcard-del">excluir</button>
         </form>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty">Nenhum abastecimento registrado ainda.<br/>Use o chat: "abasteci 42 litros, 87450 km, R$ 320".</div>
+  <div class="empty">Nenhum bem cadastrado ainda.</div>
   {% endif %}
+
+  <div class="bem-form" id="bemForm">
+    <form method="POST" action="/bens/novo">
+      <div class="fg">
+        <label>Nome</label>
+        <input type="text" name="nome" placeholder="Ex.: Apartamento, Carro antigo..." required/>
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label>Tipo</label>
+          <select name="tipo" required>
+            <option value="imovel">Imóvel</option>
+            <option value="veiculo">Veículo</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Valor (R$)</label>
+          <input type="number" name="valor" step="0.01" min="0" required/>
+        </div>
+      </div>
+      <button type="submit">Cadastrar bem</button>
+    </form>
+  </div>
 
 </main>
 
@@ -227,6 +268,10 @@
   document.querySelectorAll('[data-flash]').forEach(el => {
     setTimeout(() => dismissFlash(el), 4000);
   });
+
+  function toggleBemForm() {
+    document.getElementById('bemForm').classList.toggle('open');
+  }
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');

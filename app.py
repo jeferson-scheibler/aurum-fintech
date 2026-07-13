@@ -80,6 +80,26 @@ def _normaliza_valor_br(raw):
         return None
 
 
+def _extrair_valor_brl(low):
+    """Acha 'R$ 123,45' / '123,45' / '123 reais' / um número solto (sem km/litros
+    logo depois) num texto já em minúsculas. Devolve string '123.45' formatada ou
+    None. Usado pelos parsers de abastecimento e movimentação (o parser de
+    lançamento comum tem sua própria lógica, mais permissiva, e não usa este
+    helper). A 4ª alternativa (número solto) exclui números seguidos de unidade
+    (km/litros/l) pra não confundir com quantidades do abastecimento."""
+    m = re.search(
+        r'r\$\s*([\d.]{1,12}(?:,\d{2})?)'
+        r'|(\d+,\d{2})'
+        r'|([\d.]{1,12}(?:,\d{2})?)\s*reais'
+        r'|(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)(?!\d)(?!,\d)(?!\s*(?:km|litros?|lts?\.?|l\b))',
+        low
+    )
+    if not m:
+        return None
+    v = _normaliza_valor_br(m.group(1) or m.group(2) or m.group(3) or m.group(4))
+    return f'{v:.2f}' if v is not None else None
+
+
 def _extrair_comprovante(texto):
     # valor: prefere "total"/"valor"; senão o primeiro R$ (centavos opcionais)
     valor = None
@@ -324,14 +344,7 @@ def _interpretar_abastecimento(texto):
     m_km = re.search(r'(\d{2,7}(?:[.,]\d+)?)\s*km\b', low)
     km = _normaliza_valor_br(m_km.group(1)) if m_km else None
 
-    m_valor = re.search(
-        r'r\$\s*([\d.]{1,12}(?:,\d{2})?)|(\d+,\d{2})|([\d.]{1,12}(?:,\d{2})?)\s*reais',
-        low
-    )
-    valor = None
-    if m_valor:
-        v = _normaliza_valor_br(m_valor.group(1) or m_valor.group(2) or m_valor.group(3))
-        valor = f'{v:.2f}' if v is not None else None
+    valor = _extrair_valor_brl(low)
 
     data = hoje
     if 'anteontem' in low:
@@ -347,6 +360,44 @@ def _interpretar_abastecimento(texto):
         'data_lancamento': data.strftime('%Y-%m-%d'),
         'observacao': texto[:140],
         'valor_encontrado': km is not None and litros is not None and valor is not None,
+    }
+
+
+# ── CHAT: movimentação de investimento (transferência, não é receita/despesa) ──
+
+MOVIMENTACAO_ENTRADA_KW = ('reservei', 'reservado', 'apliquei')
+MOVIMENTACAO_SAIDA_KW   = ('retirei', 'retirado', 'resgatei', 'resgate')
+# obs.: 'investi' não entra na lista de entrada de propósito — é substring de
+# "investimento", que sempre aparece na frase (ver _e_movimentacao), então
+# sempre "bateria" e quebraria a detecção de direção pelas outras palavras.
+
+
+def _e_movimentacao(low):
+    if 'investimento' not in low:
+        return False
+    return any(k in low for k in MOVIMENTACAO_ENTRADA_KW) or any(k in low for k in MOVIMENTACAO_SAIDA_KW)
+
+
+def _interpretar_movimentacao(texto):
+    low  = texto.lower()
+    hoje = datetime.now().date()
+
+    direcao = 'entrada' if any(k in low for k in MOVIMENTACAO_ENTRADA_KW) else 'saida'
+    valor   = _extrair_valor_brl(low)
+
+    data = hoje
+    if 'anteontem' in low:
+        data = hoje - timedelta(days=2)
+    elif 'ontem' in low:
+        data = hoje - timedelta(days=1)
+
+    return {
+        'registro': 'movimentacao',
+        'direcao': direcao,
+        'valor': valor or '',
+        'data_lancamento': data.strftime('%Y-%m-%d'),
+        'observacao': texto[:140],
+        'valor_encontrado': valor is not None,
     }
 
 
@@ -564,7 +615,9 @@ def _progresso_metas(conn):
         else:
             cur.execute(
                 """SELECT COALESCE(SUM(CASE WHEN tipo_lancamento = 'receita' THEN valor ELSE -valor END), 0)
-                   FROM lancamento WHERE situacao = 'ativo' AND data_lancamento >= %s""",
+                   FROM lancamento
+                   WHERE situacao = 'ativo' AND tipo_lancamento IN ('receita', 'despesa')
+                     AND data_lancamento >= %s""",
                 (m['data_inicio'],)
             )
             progresso = max(float(cur.fetchone()[0]), 0)
@@ -824,6 +877,10 @@ def chat():
                 dados    = _interpretar_abastecimento(texto)
                 erro_msg = ('Não identifiquei litros/km/valor. Tente algo como '
                            '"abasteci 42 litros, 87450 km, R$ 320".')
+            elif _e_movimentacao(low):
+                dados    = _interpretar_movimentacao(texto)
+                erro_msg = ('Não identifiquei o valor. Tente algo como '
+                           '"reservei 200 pro investimento" ou "retirei 100 do investimento".')
             else:
                 dados    = _interpretar_texto(texto)
                 erro_msg = ('Não identifiquei o valor. Tente algo como '
@@ -896,6 +953,46 @@ def chat_confirmar():
 
             flash('Abastecimento registrado.', 'ok')
             return redirect(url_for('home' if origem == 'home' else 'veiculo'))
+        except Exception as e:
+            session['chat_erro'] = f'Erro ao salvar: {e}'
+            return redirect(url_for(destino_erro))
+
+    if registro == 'movimentacao':
+        direcao = request.form.get('direcao', '')
+        valor   = request.form.get('valor', '').replace(',', '.')
+        data    = request.form.get('data_lancamento', '')
+
+        if direcao not in ('entrada', 'saida') or not all([valor, data]):
+            session['chat_erro'] = 'Faltou algum dado pra registrar a movimentação.'
+            return redirect(url_for(destino_erro))
+
+        try:
+            conn = get_conn()
+            cur  = conn.cursor()
+            cur.execute("SELECT id FROM bem WHERE tipo = 'investimento' AND auto = TRUE LIMIT 1")
+            row = cur.fetchone()
+            if not row:
+                session['chat_erro'] = 'Nenhum bem de investimento cadastrado.'
+                cur.close()
+                conn.close()
+                return redirect(url_for(destino_erro))
+            bem_id = row[0]
+
+            rotulo = 'reserva' if direcao == 'entrada' else 'resgate'
+            cur.execute(
+                """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, bem_id, direcao)
+                   VALUES (%s, %s, %s, 'movimentacao', 'ativo', %s, %s)""",
+                (f'Investimento ({rotulo})', data, float(valor), bem_id, direcao)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            for k in ('chat_draft', 'chat_msg', 'chat_erro', 'chat_origem'):
+                session.pop(k, None)
+
+            flash('Movimentação registrada.', 'ok')
+            return redirect(url_for('home' if origem == 'home' else 'bens'))
         except Exception as e:
             session['chat_erro'] = f'Erro ao salvar: {e}'
             return redirect(url_for(destino_erro))
@@ -997,6 +1094,90 @@ def veiculo_excluir(id):
     except Exception as e:
         flash(f'Erro ao remover: {e}', 'erro')
     return redirect(url_for('veiculo'))
+
+
+# ── BENS: patrimônio (imóveis, investimentos, outros) ──────────────────────────
+
+@app.route('/bens')
+@login_required
+def bens():
+    conn = get_conn()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM bem WHERE situacao = 'ativo' ORDER BY tipo, id")
+        registros = cur.fetchall()
+        cur.close()
+
+        cur2  = conn.cursor()
+        lista = []
+        for b in registros:
+            if b['auto']:
+                cur2.execute(
+                    """SELECT COALESCE(SUM(CASE WHEN direcao = 'entrada' THEN valor ELSE -valor END), 0)
+                       FROM lancamento
+                       WHERE bem_id = %s AND tipo_lancamento = 'movimentacao' AND situacao = 'ativo'""",
+                    (b['id'],)
+                )
+                valor = float(cur2.fetchone()[0])
+            else:
+                valor = float(b['valor'])
+            lista.append({'id': b['id'], 'nome': b['nome'], 'tipo': b['tipo'], 'valor': valor, 'auto': b['auto']})
+        cur2.close()
+    finally:
+        conn.close()
+
+    return render_template('bens.html',
+                           usuario_nome=session.get('usuario_nome'),
+                           bens=lista,
+                           total=sum(b['valor'] for b in lista))
+
+
+@app.route('/bens/novo', methods=['POST'])
+@login_required
+def bens_novo():
+    nome  = request.form.get('nome', '').strip()
+    tipo  = request.form.get('tipo', '')
+    valor = request.form.get('valor', '').replace(',', '.')
+
+    if not nome or tipo not in ('imovel', 'veiculo', 'outro') or not valor:
+        flash('Preencha nome, tipo e valor do bem.', 'erro')
+        return redirect(url_for('bens'))
+
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute(
+            "INSERT INTO bem (nome, tipo, valor, auto) VALUES (%s, %s, %s, FALSE)",
+            (nome, tipo, float(valor))
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash('Bem cadastrado.', 'ok')
+    except Exception as e:
+        flash(f'Erro ao cadastrar: {e}', 'erro')
+    return redirect(url_for('bens'))
+
+
+@app.route('/bens/excluir/<int:id>', methods=['POST'])
+@login_required
+def bens_excluir(id):
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute("SELECT auto FROM bem WHERE id = %s", (id,))
+        row = cur.fetchone()
+        if row and row[0]:
+            flash('Esse bem é automático e não pode ser excluído.', 'erro')
+        else:
+            cur.execute("DELETE FROM bem WHERE id = %s", (id,))
+            conn.commit()
+            flash('Bem removido.', 'ok')
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f'Erro ao remover: {e}', 'erro')
+    return redirect(url_for('bens'))
 
 
 # ── LISTAR ─────────────────────────────────────────────────────────────────────
@@ -1127,23 +1308,35 @@ def importar_extrato():
             conn = get_conn()
             cur  = conn.cursor()
 
+            # transferências pra investimento ("reservado"/"retirado") não são receita/despesa
+            cur.execute("SELECT id FROM bem WHERE tipo = 'investimento' AND auto = TRUE LIMIT 1")
+            row = cur.fetchone()
+            bem_investimento_id = row[0] if row else None
+
             # deduplicação: ignora transações já existentes (mesma data+valor+tipo+descrição)
             cur.execute("SELECT descricao, data_lancamento, valor, tipo_lancamento FROM lancamento")
             existentes = {(d, str(dt), float(v), t) for (d, dt, v, t) in cur.fetchall()}
 
             novos = []
             for it in escolhidos:
-                chave = (it['descricao'], it['data_lancamento'], float(it['valor']), it['tipo_lancamento'])
+                tipo, direcao, bem_id = it['tipo_lancamento'], None, None
+                if bem_investimento_id and 'investimento' in it['descricao'].lower():
+                    direcao = 'entrada' if tipo == 'despesa' else 'saida'
+                    bem_id  = bem_investimento_id
+                    tipo    = 'movimentacao'
+
+                chave = (it['descricao'], it['data_lancamento'], float(it['valor']), tipo)
                 if chave not in existentes:
-                    novos.append(it)
+                    novos.append({**it, 'tipo_lancamento': tipo, 'direcao': direcao, 'bem_id': bem_id})
                     existentes.add(chave)          # evita duplicar dentro do próprio lote
 
             if novos:
                 cur.executemany(
-                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
-                       VALUES (%s, %s, %s, %s, 'ativo', %s)""",
-                    [(it['descricao'], it['data_lancamento'], float(it['valor']),
-                      it['tipo_lancamento'], 'Importado do extrato') for it in novos]
+                    """INSERT INTO lancamento
+                           (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, bem_id, direcao)
+                       VALUES (%s, %s, %s, %s, 'ativo', %s, %s, %s)""",
+                    [(it['descricao'], it['data_lancamento'], float(it['valor']), it['tipo_lancamento'],
+                      'Importado do extrato', it['bem_id'], it['direcao']) for it in novos]
                 )
                 conn.commit()
             cur.close()
