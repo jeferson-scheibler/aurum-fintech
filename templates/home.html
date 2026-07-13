@@ -43,6 +43,15 @@
       mask-image: radial-gradient(circle at 90% 0%, black, transparent 55%);
       pointer-events: none; z-index: 0;
     }
+    body::after {
+      content: ''; position: fixed; inset: 0;
+      background-image: url('{{ url_for("static", filename="img/home-bg.webp") }}');
+      background-repeat: no-repeat; background-position: center 60%;
+      background-size: min(1000px, 130vw);
+      opacity: 0.4;
+      mask-image: radial-gradient(circle at 50% 55%, black, transparent 68%);
+      pointer-events: none; z-index: 0;
+    }
 
     /* ── nav ── */
     nav {
