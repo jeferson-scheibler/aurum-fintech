@@ -403,11 +403,15 @@
     <div class="meta-card {{ m.status }}">
       <div class="meta-top">
         <span class="meta-nome">{{ m.nome }}</span>
-        <span class="meta-tag">{{ 'Limite' if m.tipo == 'limite' else 'Economia' }}</span>
+        <span class="meta-tag">{{ 'Limite' if m.tipo == 'limite' else ('Investimento' if m.tipo == 'investimento' else 'Economia') }}</span>
       </div>
       <div class="meta-bar-wrap"><div class="meta-bar" style="width:{{ m.pct if m.pct <= 100 else 100 }}%;"></div></div>
       <div class="meta-foot">
+        {% if m.tipo == 'investimento' %}
+        <span class="valores"><b>{{ m.progresso | brl }}</b> de {{ m.meta_valor_rs | brl }} ({{ m.valor_alvo | round(1) }}% da renda) · {{ m.pct }}%</span>
+        {% else %}
         <span class="valores"><b>{{ m.progresso | brl }}</b> de {{ m.valor_alvo | brl }} · {{ m.pct }}%</span>
+        {% endif %}
         <div style="display:flex; align-items:center; gap:10px;">
           {% if m.dias_restantes is not none %}
           <span class="dias">{{ m.dias_restantes }}d restantes</span>
@@ -433,14 +437,15 @@
       <div class="row2">
         <div class="fg">
           <label>Tipo</label>
-          <select name="tipo" required>
+          <select name="tipo" required onchange="onTipoMetaChange(this)">
             <option value="limite">Limite de gasto (mensal)</option>
             <option value="economia">Meta de economia</option>
+            <option value="investimento">Investir % da renda (mensal)</option>
           </select>
         </div>
         <div class="fg">
-          <label>Valor (R$)</label>
-          <input type="number" name="valor_alvo" step="0.01" min="0.01" required/>
+          <label id="lblValorAlvo">Valor (R$)</label>
+          <input type="number" id="valorAlvoInput" name="valor_alvo" step="0.01" min="0.01" required/>
         </div>
       </div>
       <div class="fg">
@@ -464,6 +469,18 @@
 
   function toggleMetaForm() {
     document.getElementById('metaForm').classList.toggle('open');
+  }
+
+  function onTipoMetaChange(sel) {
+    const lbl = document.getElementById('lblValorAlvo');
+    const inp = document.getElementById('valorAlvoInput');
+    if (sel.value === 'investimento') {
+      lbl.textContent = 'Meta (% da renda)';
+      inp.step = '0.1'; inp.max = '100'; inp.placeholder = 'Ex.: 20';
+    } else {
+      lbl.textContent = 'Valor (R$)';
+      inp.step = '0.01'; inp.removeAttribute('max'); inp.placeholder = '';
+    }
   }
 
   if ('serviceWorker' in navigator) {

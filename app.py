@@ -612,6 +612,30 @@ def _progresso_metas(conn):
                 'valor_alvo': alvo, 'progresso': progresso, 'pct': round(pct),
                 'status': status, 'data_alvo': None, 'dias_restantes': None,
             })
+        elif m['tipo'] == 'investimento':
+            cur.execute(
+                """SELECT COALESCE(SUM(valor), 0) FROM lancamento
+                   WHERE tipo_lancamento = 'receita' AND situacao = 'ativo'
+                     AND date_trunc('month', data_lancamento) = date_trunc('month', CURRENT_DATE)"""
+            )
+            receita_mes = float(cur.fetchone()[0])
+
+            cur.execute(
+                """SELECT COALESCE(SUM(valor), 0) FROM lancamento
+                   WHERE tipo_lancamento = 'movimentacao' AND direcao = 'entrada' AND situacao = 'ativo'
+                     AND date_trunc('month', data_lancamento) = date_trunc('month', CURRENT_DATE)"""
+            )
+            investido_mes = float(cur.fetchone()[0])
+
+            meta_valor_rs = receita_mes * (alvo / 100)
+            pct    = min(investido_mes / meta_valor_rs * 100, 999) if meta_valor_rs > 0 else 0
+            status = 'ok' if pct >= 100 else ('atencao' if pct >= 50 else 'inicio')
+            resultado.append({
+                'id': m['id'], 'nome': m['nome'], 'tipo': 'investimento',
+                'valor_alvo': alvo, 'progresso': investido_mes, 'meta_valor_rs': meta_valor_rs,
+                'receita_mes': receita_mes, 'pct': round(pct),
+                'status': status, 'data_alvo': None, 'dias_restantes': None,
+            })
         else:
             cur.execute(
                 """SELECT COALESCE(SUM(CASE WHEN tipo_lancamento = 'receita' THEN valor ELSE -valor END), 0)
@@ -720,8 +744,16 @@ def metas_nova():
     valor_alvo = request.form.get('valor_alvo', '').replace(',', '.')
     data_alvo  = request.form.get('data_alvo') or None
 
-    if not nome or tipo not in ('limite', 'economia') or not valor_alvo:
+    if not nome or tipo not in ('limite', 'economia', 'investimento') or not valor_alvo:
         flash('Preencha nome, tipo e valor da meta.', 'erro')
+        return redirect(url_for('home'))
+
+    try:
+        if tipo == 'investimento' and not (0 < float(valor_alvo) <= 100):
+            flash('A meta de investimento deve ser uma porcentagem entre 0 e 100.', 'erro')
+            return redirect(url_for('home'))
+    except ValueError:
+        flash('Valor da meta inválido.', 'erro')
         return redirect(url_for('home'))
 
     try:
@@ -1122,14 +1154,27 @@ def bens():
             else:
                 valor = float(b['valor'])
             lista.append({'id': b['id'], 'nome': b['nome'], 'tipo': b['tipo'], 'valor': valor, 'auto': b['auto']})
+
+        cur2.execute(
+            """SELECT COALESCE(SUM(CASE WHEN tipo_lancamento = 'receita' THEN valor ELSE -valor END), 0)
+               FROM lancamento
+               WHERE situacao = 'ativo' AND tipo_lancamento IN ('receita', 'despesa')"""
+        )
+        caixa = float(cur2.fetchone()[0])
         cur2.close()
     finally:
         conn.close()
 
+    investido   = sum(b['valor'] for b in lista if b['auto'])
+    outros_bens = sum(b['valor'] for b in lista if not b['auto'])
+
     return render_template('bens.html',
                            usuario_nome=session.get('usuario_nome'),
                            bens=lista,
-                           total=sum(b['valor'] for b in lista))
+                           caixa=caixa,
+                           investido=investido,
+                           outros_bens=outros_bens,
+                           total=caixa + investido + outros_bens)
 
 
 @app.route('/bens/novo', methods=['POST'])
