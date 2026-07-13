@@ -195,6 +195,21 @@
     .insight.up .v   { color: var(--green); }
     .insight.down .v { color: var(--red); }
 
+    /* ── gastos por categoria ── */
+    .cat-list { display: flex; flex-direction: column; gap: 8px; }
+    .cat-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border); padding: 12px 14px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    }
+    .cat-row .nome { font-size: 12px; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cat-row .right { display: flex; align-items: baseline; gap: 8px; flex: none; }
+    .cat-row .valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; }
+    .cat-row .delta { font-size: 10px; letter-spacing: 0.02em; }
+    .cat-row .delta.up   { color: var(--red); }
+    .cat-row .delta.down { color: var(--green); }
+    .cat-row .delta.flat { color: var(--muted); }
+
     /* ── metas ── */
     .metas { display: flex; flex-direction: column; gap: 10px; }
     .meta-card {
@@ -418,6 +433,27 @@
     </div>
     {% endif %}
   </div>
+
+  {% if insights.gastos_por_categoria %}
+  <div class="sec-head"><span class="t">Gastos por categoria</span></div>
+  <div class="cat-list">
+    {% for c in insights.gastos_por_categoria %}
+    <div class="cat-row">
+      <span class="nome">{{ c.nome }}</span>
+      <span class="right">
+        <span class="valor">{{ c.atual | brl }}</span>
+        {% if c.variacao_pct is not none %}
+        <span class="delta {{ 'up' if c.variacao_pct > 0 else ('down' if c.variacao_pct < 0 else 'flat') }}">
+          {{ '+' if c.variacao_pct > 0 else '' }}{{ c.variacao_pct }}%
+        </span>
+        {% else %}
+        <span class="delta flat">novo</span>
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <!-- METAS -->
   <div class="sec-head">

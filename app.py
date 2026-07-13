@@ -485,6 +485,33 @@ def _aprender_categoria(conn, descricao, categoria_id):
     cur.close()
 
 
+def _categorizar_pendentes(conn):
+    """Roda a sugestão automática nos lançamentos antigos que ficaram sem
+    categoria (criados antes dessa funcionalidade existir, ou sem match na
+    época). Devolve quantos foram categorizados agora."""
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """SELECT id, descricao FROM lancamento
+           WHERE categoria_id IS NULL AND tipo_lancamento IN ('receita', 'despesa')"""
+    )
+    pendentes = cur.fetchall()
+    cur.close()
+    if not pendentes:
+        return 0
+
+    cur = conn.cursor()
+    categorizados = 0
+    for r in pendentes:
+        categoria_id = _sugerir_categoria(conn, r['descricao'])
+        if categoria_id:
+            cur.execute("UPDATE lancamento SET categoria_id = %s WHERE id = %s", (categoria_id, r['id']))
+            categorizados += 1
+    cur.close()
+    if categorizados:
+        conn.commit()
+    return categorizados
+
+
 def _historico_abastecimentos(conn, veiculo_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
@@ -814,15 +841,49 @@ def _calcular_insights(conn):
     dias_no_mes = (proximo_mes - primeiro_dia_mes).days
     projecao = (despesas_mes_atual / dias_passados * dias_no_mes) if dias_passados else 0.0
 
+    cur.execute(
+        """SELECT COALESCE(categoria.nome, 'Sem categoria') AS nome, COALESCE(SUM(lancamento.valor), 0)
+           FROM lancamento LEFT JOIN categoria ON categoria.id = lancamento.categoria_id
+           WHERE lancamento.tipo_lancamento = 'despesa' AND lancamento.situacao = 'ativo'
+             AND lancamento.data_lancamento >= %s
+           GROUP BY nome""",
+        (primeiro_dia_mes,)
+    )
+    atual_por_categoria = {nome: float(total) for nome, total in cur.fetchall()}
+
+    cur.execute(
+        """SELECT COALESCE(categoria.nome, 'Sem categoria') AS nome, COALESCE(SUM(lancamento.valor), 0)
+           FROM lancamento LEFT JOIN categoria ON categoria.id = lancamento.categoria_id
+           WHERE lancamento.tipo_lancamento = 'despesa' AND lancamento.situacao = 'ativo'
+             AND lancamento.data_lancamento BETWEEN %s AND %s
+           GROUP BY nome""",
+        (primeiro_dia_mes_ant, ultimo_dia_mes_ant)
+    )
+    anterior_por_categoria = {nome: float(total) for nome, total in cur.fetchall()}
+
+    nomes_categorias = sorted(
+        set(atual_por_categoria) | set(anterior_por_categoria),
+        key=lambda n: atual_por_categoria.get(n, 0.0), reverse=True
+    )
+    gastos_por_categoria = []
+    for nome in nomes_categorias[:8]:
+        valor_atual    = atual_por_categoria.get(nome, 0.0)
+        valor_anterior = anterior_por_categoria.get(nome, 0.0)
+        var_pct = round((valor_atual - valor_anterior) / valor_anterior * 100) if valor_anterior > 0 else None
+        gastos_por_categoria.append({
+            'nome': nome, 'atual': valor_atual, 'anterior': valor_anterior, 'variacao_pct': var_pct,
+        })
+
     cur.close()
     return {
-        'despesas_mes_atual':   despesas_mes_atual,
-        'despesas_mes_passado': despesas_mes_passado,
-        'variacao_pct':         variacao_pct,
-        'maior_gasto':          maior_gasto,
-        'projecao':             projecao,
-        'dias_passados':        dias_passados,
-        'dias_no_mes':          dias_no_mes,
+        'despesas_mes_atual':    despesas_mes_atual,
+        'despesas_mes_passado':  despesas_mes_passado,
+        'variacao_pct':          variacao_pct,
+        'maior_gasto':           maior_gasto,
+        'projecao':              projecao,
+        'dias_passados':         dias_passados,
+        'dias_no_mes':           dias_no_mes,
+        'gastos_por_categoria':  gastos_por_categoria,
     }
 
 
@@ -1388,6 +1449,14 @@ def lancamentos():
     filtros = _ler_filtros()
 
     try:
+        conn = get_conn()
+        try:
+            categorizados = _categorizar_pendentes(conn)
+        finally:
+            conn.close()
+        if categorizados:
+            flash(f'{categorizados} lançamento(s) antigo(s) categorizado(s) automaticamente.', 'ok')
+
         registros = _buscar_lancamentos(filtros)
         total_receitas, total_despesas, saldo = _calcular_totais(registros)
     except Exception:
