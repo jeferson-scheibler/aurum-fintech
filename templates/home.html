@@ -349,6 +349,17 @@
             <label for="data_lancamento">Data</label>
             <input type="date" id="data_lancamento" name="data_lancamento" value="{{ draft.data_lancamento }}" required/>
           </div>
+          <div class="fg full">
+            <label for="categoria_id">Categoria</label>
+            <select id="categoria_id" name="categoria_id" onchange="onCategoriaChange(this)">
+              <option value="">Sem categoria</option>
+              {% for c in categorias %}
+              <option value="{{ c.id }}" {% if draft.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+              {% endfor %}
+              <option value="__nova__">+ Nova categoria...</option>
+            </select>
+            <input type="text" id="categoria_nova" name="categoria_nova" placeholder="Nome da nova categoria" style="display:none; margin-top:8px;"/>
+          </div>
         </div>
         {% endif %}
       </form>
@@ -469,6 +480,10 @@
 
   function toggleMetaForm() {
     document.getElementById('metaForm').classList.toggle('open');
+  }
+
+  function onCategoriaChange(sel) {
+    document.getElementById('categoria_nova').style.display = sel.value === '__nova__' ? 'block' : 'none';
   }
 
   function onTipoMetaChange(sel) {

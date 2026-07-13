@@ -226,7 +226,7 @@
         <label for="descricao">Descrição *</label>
         <input type="text" id="descricao" name="descricao" maxlength="255" required
                value="{{ lancamento.descricao if lancamento else (prefill.descricao if prefill else '') }}"
-               placeholder="Ex: Salário, Aluguel..."/>
+               placeholder="Ex: Salário, Aluguel..." onblur="sugerirCategoria(this.value)"/>
       </div>
 
       <div class="form-row-2">
@@ -262,6 +262,18 @@
       </div>
 
       <div class="form-row">
+        <label for="categoria_id">Categoria</label>
+        <select id="categoria_id" name="categoria_id" onchange="onCategoriaChange(this)">
+          <option value="">Sem categoria</option>
+          {% for c in categorias %}
+          <option value="{{ c.id }}" {% if lancamento and lancamento.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+          {% endfor %}
+          <option value="__nova__">+ Nova categoria...</option>
+        </select>
+        <input type="text" id="categoria_nova" name="categoria_nova" placeholder="Nome da nova categoria" style="display:none; margin-top:10px;"/>
+      </div>
+
+      <div class="form-row">
         <label for="observacao">Observação</label>
         <textarea id="observacao" name="observacao" maxlength="500" placeholder="Informações adicionais sobre o lançamento...">{{ lancamento.observacao if lancamento else (prefill.observacao if prefill else '') }}</textarea>
       </div>
@@ -277,6 +289,29 @@
 </main>
 
 <script>
+  let categoriaTocada = {{ 'true' if lancamento and lancamento.categoria_id else 'false' }};
+
+  document.getElementById('categoria_id').addEventListener('change', function() {
+    categoriaTocada = true;
+    onCategoriaChange(this);
+  });
+
+  function onCategoriaChange(sel) {
+    document.getElementById('categoria_nova').style.display = sel.value === '__nova__' ? 'block' : 'none';
+  }
+
+  function sugerirCategoria(descricao) {
+    if (categoriaTocada || !descricao.trim()) return;
+    fetch('/categorias/sugerir?descricao=' + encodeURIComponent(descricao))
+      .then(r => r.json())
+      .then(data => {
+        if (data.categoria_id && !categoriaTocada) {
+          document.getElementById('categoria_id').value = data.categoria_id;
+        }
+      })
+      .catch(() => {});
+  }
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');
   }

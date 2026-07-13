@@ -401,6 +401,73 @@ def _interpretar_movimentacao(texto):
     }
 
 
+# ── CATEGORIAS: classificação automática e aprendizado por reforço manual ──────
+
+CATEGORIAS_KEYWORDS = {
+    'Alimentação': ('mercado', 'supermercado', 'restaurante', 'lanche', 'ifood', 'padaria', 'açougue'),
+    'Transporte':  ('uber', '99', 'gasolina', 'combustível', 'estacionamento', 'pedágio', 'ônibus', 'passagem'),
+    'Moradia':     ('aluguel', 'condomínio', 'energia', 'água', 'internet', 'gás'),
+    'Lazer':       ('cinema', 'streaming', 'netflix', 'viagem', 'show', 'bar'),
+    'Saúde':       ('farmácia', 'remédio', 'médico', 'consulta', 'dentista'),
+    'Educação':    ('curso', 'faculdade', 'escola', 'mensalidade'),
+    'Salário':     ('salário', 'salario', 'freelance'),
+}
+
+
+def _sugerir_categoria(conn, descricao):
+    """Regra aprendida (exata, por descrição normalizada) tem prioridade sobre
+    o classificador por palavra-chave. Devolve None se nada bater."""
+    norm = descricao.strip().lower()
+    cur = conn.cursor()
+    cur.execute("SELECT categoria_id FROM categoria_regra WHERE descricao_norm = %s", (norm,))
+    row = cur.fetchone()
+    if row:
+        cur.close()
+        return row[0]
+    for nome, kws in CATEGORIAS_KEYWORDS.items():
+        if any(k in norm for k in kws):
+            cur.execute("SELECT id FROM categoria WHERE nome = %s", (nome,))
+            r = cur.fetchone()
+            cur.close()
+            return r[0] if r else None
+    cur.close()
+    return None
+
+
+def _resolver_categoria_id(conn, categoria_id_raw, categoria_nova):
+    """Trata a opção "+ Nova categoria..." dos formulários: cria (ou reaproveita)
+    a categoria pelo nome e devolve o id. Senão, devolve o id escolhido ou None."""
+    if categoria_id_raw == '__nova__' and categoria_nova.strip():
+        nome = categoria_nova.strip()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO categoria (nome) VALUES (%s) ON CONFLICT (nome) DO NOTHING", (nome,))
+        cur.execute("SELECT id FROM categoria WHERE nome = %s", (nome,))
+        row = cur.fetchone()
+        cur.close()
+        return row[0] if row else None
+    return int(categoria_id_raw) if categoria_id_raw and categoria_id_raw.isdigit() else None
+
+
+def _listar_categorias(conn):
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT id, nome FROM categoria ORDER BY nome")
+    categorias = cur.fetchall()
+    cur.close()
+    return categorias
+
+
+def _aprender_categoria(conn, descricao, categoria_id):
+    if not categoria_id:
+        return
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO categoria_regra (descricao_norm, categoria_id) VALUES (%s, %s)
+           ON CONFLICT (descricao_norm) DO UPDATE SET categoria_id = EXCLUDED.categoria_id""",
+        (descricao.strip().lower(), categoria_id)
+    )
+    cur.close()
+
+
 def _historico_abastecimentos(conn, veiculo_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
@@ -556,7 +623,12 @@ def _buscar_lancamentos(filtros):
     conn = get_conn()
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    query, params = "SELECT * FROM lancamento WHERE 1=1", []
+    query, params = (
+        """SELECT lancamento.*, categoria.nome AS categoria_nome
+           FROM lancamento LEFT JOIN categoria ON categoria.id = lancamento.categoria_id
+           WHERE 1=1""",
+        []
+    )
     if filtros['tipo']:
         query += " AND tipo_lancamento = %s"
         params.append(filtros['tipo'])
@@ -721,8 +793,9 @@ def _calcular_insights(conn):
 def home():
     conn = get_conn()
     try:
-        metas    = _progresso_metas(conn)
-        insights = _calcular_insights(conn)
+        metas      = _progresso_metas(conn)
+        insights   = _calcular_insights(conn)
+        categorias = _listar_categorias(conn)
     finally:
         conn.close()
 
@@ -733,7 +806,8 @@ def home():
                            draft=session.get('chat_draft'),
                            msg=session.get('chat_msg'),
                            erro=session.get('chat_erro'),
-                           chat_origem=session.get('chat_origem', 'home'))
+                           chat_origem=session.get('chat_origem', 'home'),
+                           categorias=categorias)
 
 
 @app.route('/metas/nova', methods=['POST'])
@@ -917,6 +991,12 @@ def chat():
                 dados    = _interpretar_texto(texto)
                 erro_msg = ('Não identifiquei o valor. Tente algo como '
                            '"gastei 50 no mercado" ou "recebi 3000 de salário".')
+                if dados['valor_encontrado']:
+                    conn = get_conn()
+                    try:
+                        dados['categoria_id'] = _sugerir_categoria(conn, dados['descricao'])
+                    finally:
+                        conn.close()
             session['chat_msg']    = texto
             session['chat_origem'] = origem
             if dados['valor_encontrado']:
@@ -927,12 +1007,19 @@ def chat():
                 session['chat_erro'] = erro_msg
         return redirect(url_for('home' if origem == 'home' else 'chat'))
 
+    conn = get_conn()
+    try:
+        categorias = _listar_categorias(conn)
+    finally:
+        conn.close()
+
     return render_template('chat.html',
                            draft=session.get('chat_draft'),
                            msg=session.get('chat_msg'),
                            erro=session.get('chat_erro'),
                            chat_origem=session.get('chat_origem', 'chat'),
-                           usuario_nome=session.get('usuario_nome'))
+                           usuario_nome=session.get('usuario_nome'),
+                           categorias=categorias)
 
 
 @app.route('/chat/confirmar', methods=['POST'])
@@ -1029,11 +1116,13 @@ def chat_confirmar():
             session['chat_erro'] = f'Erro ao salvar: {e}'
             return redirect(url_for(destino_erro))
 
-    descricao       = request.form.get('descricao', '').strip()
-    data_lancamento = request.form.get('data_lancamento', '')
-    valor           = request.form.get('valor', '').replace(',', '.')
-    tipo_lancamento = request.form.get('tipo_lancamento', '')
-    observacao      = request.form.get('observacao', '').strip()
+    descricao        = request.form.get('descricao', '').strip()
+    data_lancamento  = request.form.get('data_lancamento', '')
+    valor            = request.form.get('valor', '').replace(',', '.')
+    tipo_lancamento  = request.form.get('tipo_lancamento', '')
+    observacao       = request.form.get('observacao', '').strip()
+    categoria_id_raw = request.form.get('categoria_id', '')
+    categoria_nova   = request.form.get('categoria_nova', '')
 
     if not all([descricao, data_lancamento, valor, tipo_lancamento]):
         session['chat_erro'] = 'Faltou algum dado pra registrar o lançamento.'
@@ -1042,12 +1131,14 @@ def chat_confirmar():
     try:
         conn = get_conn()
         cur  = conn.cursor()
+        categoria_id = _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
         cur.execute(
-            """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
-               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-            (descricao, data_lancamento, float(valor), tipo_lancamento, 'ativo', observacao)
+            """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, categoria_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+            (descricao, data_lancamento, float(valor), tipo_lancamento, 'ativo', observacao, categoria_id)
         )
         novo_id = cur.fetchone()[0]
+        _aprender_categoria(conn, descricao, categoria_id)
         conn.commit()
         cur.close()
         conn.close()
@@ -1067,6 +1158,20 @@ def chat_confirmar():
     except Exception as e:
         session['chat_erro'] = f'Erro ao salvar: {e}'
         return redirect(url_for(destino_erro))
+
+
+@app.route('/categorias/sugerir')
+@login_required
+def categorias_sugerir():
+    descricao = request.args.get('descricao', '')
+    if not descricao.strip():
+        return {'categoria_id': None}
+    conn = get_conn()
+    try:
+        categoria_id = _sugerir_categoria(conn, descricao)
+    finally:
+        conn.close()
+    return {'categoria_id': categoria_id}
 
 
 @app.route('/chat/descartar', methods=['POST'])
@@ -1260,12 +1365,14 @@ def lancamentos():
 def novo_lancamento():
     erro = None
     if request.method == 'POST':
-        descricao       = request.form['descricao'].strip()
-        data_lancamento = request.form['data_lancamento']
-        valor           = request.form['valor'].replace(',', '.')
-        tipo_lancamento = request.form['tipo_lancamento']
-        situacao        = request.form.get('situacao', 'ativo')
-        observacao      = request.form.get('observacao', '').strip()
+        descricao        = request.form['descricao'].strip()
+        data_lancamento  = request.form['data_lancamento']
+        valor            = request.form['valor'].replace(',', '.')
+        tipo_lancamento  = request.form['tipo_lancamento']
+        situacao         = request.form.get('situacao', 'ativo')
+        observacao       = request.form.get('observacao', '').strip()
+        categoria_id_raw = request.form.get('categoria_id', '')
+        categoria_nova   = request.form.get('categoria_nova', '')
 
         if not all([descricao, data_lancamento, valor, tipo_lancamento]):
             erro = 'Preencha todos os campos obrigatórios.'
@@ -1273,12 +1380,14 @@ def novo_lancamento():
             try:
                 conn = get_conn()
                 cur  = conn.cursor()
+                categoria_id = _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
                 cur.execute(
-                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao)
-                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao)
+                    """INSERT INTO lancamento (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, categoria_id)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, categoria_id)
                 )
                 novo_id = cur.fetchone()[0]
+                _aprender_categoria(conn, descricao, categoria_id)
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -1295,9 +1404,15 @@ def novo_lancamento():
             except Exception as e:
                 erro = f'Erro ao salvar: {e}'
 
+    conn = get_conn()
+    try:
+        categorias = _listar_categorias(conn)
+    finally:
+        conn.close()
+
     prefill = session.pop('prefill', None) if request.method == 'GET' else None
     return render_template('form_lancamento.html', acao='Novo', lancamento=None, prefill=prefill,
-                           erro=erro, usuario_nome=session.get('usuario_nome'))
+                           erro=erro, usuario_nome=session.get('usuario_nome'), categorias=categorias)
 
 
 # ── COMPARTILHAR: recebe comprovante via Web Share Target e pré-preenche ───────
@@ -1364,24 +1479,26 @@ def importar_extrato():
 
             novos = []
             for it in escolhidos:
-                tipo, direcao, bem_id = it['tipo_lancamento'], None, None
+                tipo, direcao, bem_id, categoria_id = it['tipo_lancamento'], None, None, None
                 if bem_investimento_id and 'investimento' in it['descricao'].lower():
                     direcao = 'entrada' if tipo == 'despesa' else 'saida'
                     bem_id  = bem_investimento_id
                     tipo    = 'movimentacao'
+                else:
+                    categoria_id = _sugerir_categoria(conn, it['descricao'])
 
                 chave = (it['descricao'], it['data_lancamento'], float(it['valor']), tipo)
                 if chave not in existentes:
-                    novos.append({**it, 'tipo_lancamento': tipo, 'direcao': direcao, 'bem_id': bem_id})
+                    novos.append({**it, 'tipo_lancamento': tipo, 'direcao': direcao, 'bem_id': bem_id, 'categoria_id': categoria_id})
                     existentes.add(chave)          # evita duplicar dentro do próprio lote
 
             if novos:
                 cur.executemany(
                     """INSERT INTO lancamento
-                           (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, bem_id, direcao)
-                       VALUES (%s, %s, %s, %s, 'ativo', %s, %s, %s)""",
+                           (descricao, data_lancamento, valor, tipo_lancamento, situacao, observacao, bem_id, direcao, categoria_id)
+                       VALUES (%s, %s, %s, %s, 'ativo', %s, %s, %s, %s)""",
                     [(it['descricao'], it['data_lancamento'], float(it['valor']), it['tipo_lancamento'],
-                      'Importado do extrato', it['bem_id'], it['direcao']) for it in novos]
+                      'Importado do extrato', it['bem_id'], it['direcao'], it['categoria_id']) for it in novos]
                 )
                 conn.commit()
             cur.close()
@@ -1423,24 +1540,28 @@ def editar_lancamento(id):
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if request.method == 'POST':
-        descricao       = request.form['descricao'].strip()
-        data_lancamento = request.form['data_lancamento']
-        valor           = request.form['valor'].replace(',', '.')
-        tipo_lancamento = request.form['tipo_lancamento']
-        situacao        = request.form.get('situacao', 'ativo')
-        observacao      = request.form.get('observacao', '')
+        descricao        = request.form['descricao'].strip()
+        data_lancamento  = request.form['data_lancamento']
+        valor            = request.form['valor'].replace(',', '.')
+        tipo_lancamento  = request.form['tipo_lancamento']
+        situacao         = request.form.get('situacao', 'ativo')
+        observacao       = request.form.get('observacao', '')
+        categoria_id_raw = request.form.get('categoria_id', '')
+        categoria_nova   = request.form.get('categoria_nova', '')
 
         if not all([descricao, data_lancamento, valor, tipo_lancamento]):
             erro = 'Preencha todos os campos obrigatórios.'
         else:
             try:
+                categoria_id = _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
                 cur.execute(
                     """UPDATE lancamento
                        SET descricao=%s, data_lancamento=%s, valor=%s,
-                           tipo_lancamento=%s, situacao=%s, observacao=%s
+                           tipo_lancamento=%s, situacao=%s, observacao=%s, categoria_id=%s
                        WHERE id=%s""",
-                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, id)
+                    (descricao, data_lancamento, float(valor), tipo_lancamento, situacao, observacao, categoria_id, id)
                 )
+                _aprender_categoria(conn, descricao, categoria_id)
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -1459,6 +1580,7 @@ def editar_lancamento(id):
 
     cur.execute("SELECT * FROM lancamento WHERE id = %s", (id,))
     lancamento = cur.fetchone()
+    categorias = _listar_categorias(conn)
     cur.close()
     conn.close()
 
@@ -1466,7 +1588,7 @@ def editar_lancamento(id):
         return redirect(url_for('lancamentos'))
 
     return render_template('form_lancamento.html', acao='Editar', lancamento=lancamento,
-                           erro=erro, usuario_nome=session.get('usuario_nome'))
+                           erro=erro, usuario_nome=session.get('usuario_nome'), categorias=categorias)
 
 
 # ── EXCLUIR ────────────────────────────────────────────────────────────────────
