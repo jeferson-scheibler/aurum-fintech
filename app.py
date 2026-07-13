@@ -537,10 +537,12 @@ def _calcular_totais(registros):
 # ── HOME: metas e insights ──────────────────────────────────────────────────────
 
 def _progresso_metas(conn):
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM meta WHERE situacao = 'ativo' ORDER BY id DESC")
-    metas = cur.fetchall()
+    cur_dict = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur_dict.execute("SELECT * FROM meta WHERE situacao = 'ativo' ORDER BY id DESC")
+    metas = cur_dict.fetchall()
+    cur_dict.close()
 
+    cur  = conn.cursor()
     hoje = datetime.now().date()
     resultado = []
     for m in metas:
