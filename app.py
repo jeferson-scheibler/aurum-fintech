@@ -1273,6 +1273,83 @@ def categorias_sugerir():
     return {'categoria_id': categoria_id}
 
 
+# ── CATEGORIZAR: pilha de cards pra categorização manual dos pendentes ─────────
+
+@app.route('/categorizar')
+@login_required
+def categorizar():
+    conn = get_conn()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """SELECT id, descricao, valor, data_lancamento, tipo_lancamento
+               FROM lancamento
+               WHERE categoria_id IS NULL AND tipo_lancamento IN ('receita', 'despesa') AND situacao = 'ativo'
+               ORDER BY data_lancamento DESC"""
+        )
+        pendentes_rows = cur.fetchall()
+        cur.close()
+
+        pendentes = []
+        for r in pendentes_rows:
+            sugestao_id = _sugerir_categoria(conn, r['descricao'])
+            pendentes.append({
+                'id': r['id'], 'descricao': r['descricao'], 'valor': float(r['valor']),
+                'data_lancamento': r['data_lancamento'].strftime('%d/%m/%Y'),
+                'tipo_lancamento': r['tipo_lancamento'], 'sugestao_id': sugestao_id,
+            })
+
+        categorias = _listar_categorias(conn)
+    finally:
+        conn.close()
+
+    return render_template('categorizar.html',
+                           usuario_nome=session.get('usuario_nome'),
+                           pendentes=pendentes,
+                           categorias=categorias)
+
+
+@app.route('/categorizar/aplicar', methods=['POST'])
+@login_required
+def categorizar_aplicar():
+    dados = request.get_json(silent=True) or {}
+    lancamento_id = dados.get('lancamento_id')
+    categoria_id_raw = str(dados.get('categoria_id', ''))
+    categoria_nova = dados.get('categoria_nova', '')
+
+    if not lancamento_id:
+        return {'ok': False, 'erro': 'lancamento_id ausente'}, 400
+
+    conn = get_conn()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT descricao FROM lancamento WHERE id = %s", (lancamento_id,))
+        row = cur.fetchone()
+        if not row:
+            cur.close()
+            return {'ok': False, 'erro': 'lançamento não encontrado'}, 404
+        cur.close()
+
+        categoria_id = _resolver_categoria_id(conn, categoria_id_raw, categoria_nova)
+        if not categoria_id:
+            return {'ok': False, 'erro': 'categoria inválida'}, 400
+
+        cur = conn.cursor()
+        cur.execute("UPDATE lancamento SET categoria_id = %s WHERE id = %s", (categoria_id, lancamento_id))
+        _aprender_categoria(conn, row['descricao'], categoria_id)
+        conn.commit()
+        cur.close()
+
+        cur = conn.cursor()
+        cur.execute("SELECT nome FROM categoria WHERE id = %s", (categoria_id,))
+        categoria_nome = cur.fetchone()[0]
+        cur.close()
+    finally:
+        conn.close()
+
+    return {'ok': True, 'categoria_id': categoria_id, 'categoria_nome': categoria_nome}
+
+
 @app.route('/chat/descartar', methods=['POST'])
 @login_required
 def chat_descartar():
@@ -1452,6 +1529,13 @@ def lancamentos():
         conn = get_conn()
         try:
             categorizados = _categorizar_pendentes(conn)
+            cur = conn.cursor()
+            cur.execute(
+                """SELECT COUNT(*) FROM lancamento
+                   WHERE categoria_id IS NULL AND tipo_lancamento IN ('receita', 'despesa') AND situacao = 'ativo'"""
+            )
+            pendentes_count = cur.fetchone()[0]
+            cur.close()
         finally:
             conn.close()
         if categorizados:
@@ -1462,6 +1546,7 @@ def lancamentos():
     except Exception:
         registros = []
         total_receitas = total_despesas = saldo = 0
+        pendentes_count = 0
 
     return render_template(
         'lancamentos.html',
@@ -1474,6 +1559,7 @@ def lancamentos():
         filtro_situacao=filtros['situacao'],
         filtro_data_ini=filtros['data_ini'],
         filtro_data_fim=filtros['data_fim'],
+        pendentes_count=pendentes_count,
     )
 
 

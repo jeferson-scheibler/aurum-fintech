@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#1FAA6D"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>Bahgoal · Categorizar</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}"/>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}"/>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand:     #1FAA6D; --brand-dim: #146B45; --brand-glow: rgba(31,170,109,.35);
+      --bg:        #050505; --surface:  #131313; --surface2: #1b1b1b;
+      --border:    #2a2a2a; --text:     #f2f2ec; --muted:    #8a8a85;
+      --green:     #38e08f; --red: #ff5c5c; --red-bg: rgba(255,92,92,.12);
+      --c1: #5b9bd5; --c2: #d5915b; --c3: #a679d1; --c4: #d15b91; --c5: #5bd1b8; --c6: #d1c15b; --c7: #8a8a85;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+    html, body { height: 100%; overscroll-behavior: none; }
+    body {
+      background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace;
+      position: relative; overflow: hidden; min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(circle at 50% 38%, rgba(31,170,109,.10), transparent 55%),
+                  radial-gradient(circle at 50% 100%, rgba(0,0,0,.6), transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── top bar ── */
+    nav {
+      position: relative; z-index: 10; flex: none;
+      display: flex; align-items: center; gap: 10px;
+      padding: env(safe-area-inset-top) 10px 0; height: calc(56px + env(safe-area-inset-top));
+      background: rgba(5,5,5,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+    }
+    .back-btn {
+      display: flex; align-items: center; justify-content: center; flex: none;
+      width: 38px; height: 38px; color: var(--text); text-decoration: none; border-radius: 50%;
+      transition: background .2s;
+    }
+    .back-btn:hover { background: var(--surface2); }
+    .back-btn svg { width: 22px; height: 22px; }
+    .nav-title { font-family: 'Oxanium', sans-serif; font-weight: 700; font-size: 15px; text-transform: lowercase; }
+    .nav-count { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+    .nav-count b { color: var(--brand); }
+    .progress-track { position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; background: var(--border); }
+    .progress-fill { height: 100%; background: var(--brand); box-shadow: 0 0 8px var(--brand-glow); transition: width .35s ease; width: 0%; }
+
+    /* ── stage ── */
+    .stage {
+      position: relative; z-index: 1; flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 18px; min-height: 0;
+    }
+    .deck { position: relative; width: min(340px, 88vw); height: min(420px, 52vh); }
+    .card {
+      position: absolute; inset: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 26px 24px 22px;
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+      display: flex; flex-direction: column;
+      transition: transform .35s cubic-bezier(.16,1,.3,1), opacity .35s ease;
+      touch-action: none; cursor: grab;
+    }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; width: 44%; height: 3px; background: var(--brand); box-shadow: 0 0 14px var(--brand-glow); }
+    .card.ghost-1 { transform: scale(.94) translateY(14px); opacity: .55; z-index: 1; pointer-events: none; }
+    .card.ghost-2 { transform: scale(.88) translateY(26px); opacity: .3; z-index: 0; pointer-events: none; }
+    .card.top { z-index: 2; }
+    .card.top:active { cursor: grabbing; }
+    .card.exit-right { transform: translate(140%, -10%) rotate(22deg); opacity: 0; }
+    .card.exit-left  { transform: translate(-140%, -10%) rotate(-22deg); opacity: 0; }
+
+    .card-tipo { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .card-tipo.receita { color: var(--green); }
+    .card-tipo.despesa { color: var(--red); }
+    .card-desc { font-family: 'Oxanium', sans-serif; font-weight: 700; font-size: 21px; line-height: 1.25; margin-bottom: 14px; word-break: break-word; }
+    .card-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 32px; margin-bottom: 4px; }
+    .card-valor.receita { color: var(--green); }
+    .card-valor.despesa { color: var(--red); }
+    .card-data { font-size: 11px; color: var(--muted); margin-bottom: auto; }
+
+    .card-sugestao {
+      display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+      background: var(--brand-glow); border: 1px solid var(--brand-dim); color: var(--brand);
+      font-size: 11px; padding: 7px 12px; margin-top: 16px;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 100%, 8px 100%);
+    }
+    .card-sugestao .dot { width: 5px; height: 5px; background: var(--brand); border-radius: 50%; flex: none; }
+    .card-sem-sugestao { font-size: 10.5px; color: var(--muted); margin-top: 16px; letter-spacing: .03em; }
+
+    .swipe-tag {
+      position: absolute; top: 22px; font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 20px;
+      letter-spacing: .1em; text-transform: uppercase; padding: 5px 14px; border: 3px solid; border-radius: 6px;
+      opacity: 0; transform: rotate(-12deg); pointer-events: none;
+    }
+    .swipe-tag.ok   { right: 20px; color: var(--brand); border-color: var(--brand); transform: rotate(12deg); }
+    .swipe-tag.skip { left: 20px; color: var(--red); border-color: var(--red); }
+
+    /* ── ações de apoio ── */
+    .actions { position: relative; z-index: 1; flex: none; display: flex; justify-content: center; gap: 20px; padding: 4px 18px 14px; }
+    .action-btn {
+      width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform .15s, border-color .2s, color .2s;
+    }
+    .action-btn svg { width: 24px; height: 24px; }
+    .action-btn:active { transform: scale(.92); }
+    .action-btn.skip:hover { border-color: var(--red); color: var(--red); }
+    .action-btn.ok:hover { border-color: var(--brand); color: var(--brand); }
+    .action-btn.ok { width: 64px; height: 64px; }
+    .action-btn.ok[disabled] { opacity: .3; pointer-events: none; }
+
+    /* ── chips de categoria ── */
+    .chips-wrap { position: relative; z-index: 1; flex: none; padding: 0 14px calc(16px + env(safe-area-inset-bottom)); }
+    .chips-label { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; padding: 0 2px; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: none; font-size: 12px; padding: 9px 15px; border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); border-left: 3px solid var(--chip-c, var(--muted)); white-space: nowrap; cursor: pointer;
+      transition: transform .12s, border-color .2s;
+    }
+    .chip:active { transform: scale(.95); }
+    .chip.nova { color: var(--brand); border-left-color: var(--brand); }
+    .chip-nova-input {
+      display: none; gap: 8px; margin-top: 8px;
+    }
+    .chip-nova-input.open { display: flex; }
+    .chip-nova-input input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border); border-left: 2px solid var(--brand-dim);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 10px 12px; outline: none;
+    }
+    .chip-nova-input button {
+      background: var(--brand); border: none; color: #06120a; font-weight: 700; font-size: 11px;
+      letter-spacing: .1em; text-transform: uppercase; padding: 0 16px; cursor: pointer;
+    }
+
+    /* ── vazio ── */
+    .empty-state { position: relative; z-index: 1; flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; gap: 14px; }
+    .empty-state.show { display: flex; }
+    .empty-state img { width: 84px; opacity: .9; filter: grayscale(.15); }
+    .empty-state h2 { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 24px; text-transform: lowercase; color: var(--brand); }
+    .empty-state p { font-size: 12px; color: var(--muted); max-width: 260px; line-height: 1.6; }
+    .empty-state a {
+      margin-top: 10px; color: #06120a; background: var(--brand); text-decoration: none; font-weight: 700;
+      font-size: 11px; letter-spacing: .16em; text-transform: uppercase; padding: 13px 26px;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%);
+    }
+
+    /* ── toast de erro ── */
+    .err-toast {
+      position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
+      transform: translate(-50%, 20px); z-index: 50;
+      background: var(--red-bg); border: 1px solid var(--red); color: var(--red);
+      font-size: 11.5px; padding: 11px 18px; white-space: nowrap;
+      opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 10px 100%);
+    }
+    .err-toast.show { opacity: 1; transform: translate(-50%, 0); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/lancamentos" class="back-btn" aria-label="Voltar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </a>
+  <span class="nav-title">categorizar</span>
+  <span class="nav-count" id="navCount"></span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</nav>
+
+<div class="stage" id="stage">
+  <div class="deck" id="deck"></div>
+</div>
+
+<div class="actions" id="actions">
+  <button class="action-btn skip" id="btnSkip" aria-label="Pular">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <button class="action-btn ok" id="btnOk" aria-label="Confirmar sugestão">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+  </button>
+</div>
+
+<div class="chips-wrap" id="chipsWrap">
+  <div class="chips-label">ou escolha a categoria</div>
+  <div class="chips" id="chips"></div>
+  <div class="chip-nova-input" id="chipNovaInput">
+    <input type="text" id="chipNovaNome" placeholder="Nome da nova categoria" maxlength="60"/>
+    <button id="chipNovaConfirmar">Criar</button>
+  </div>
+</div>
+
+<div class="empty-state" id="emptyState">
+  <img src="{{ url_for('static', filename='img/logo-bagual.png') }}" alt=""/>
+  <h2>tudo categorizado!</h2>
+  <p>Nenhum lançamento pendente por aqui. Quando entrar algo novo sem categoria, essa tela enche de novo.</p>
+  <a href="/lancamentos">Voltar aos lançamentos</a>
+</div>
+
+<div class="err-toast" id="errToast"></div>
+
+<script>
+  const PENDENTES  = {{ pendentes | tojson }};
+  const CATEGORIAS = {{ categorias | tojson }};
+  const CHIP_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)'];
+
+  let fila = PENDENTES.slice();
+  const total = fila.length;
+  let categorias = CATEGORIAS.slice();
+
+  const deck        = document.getElementById('deck');
+  const navCount     = document.getElementById('navCount');
+  const progressFill = document.getElementById('progressFill');
+  const btnSkip      = document.getElementById('btnSkip');
+  const btnOk        = document.getElementById('btnOk');
+  const chipsEl      = document.getElementById('chips');
+  const emptyState   = document.getElementById('emptyState');
+  const stage        = document.getElementById('stage');
+  const actions      = document.getElementById('actions');
+  const chipsWrap    = document.getElementById('chipsWrap');
+  const chipNovaInput = document.getElementById('chipNovaInput');
+  const chipNovaNome  = document.getElementById('chipNovaNome');
+
+  function formatBRL(v) {
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  function renderChips() {
+    chipsEl.innerHTML = '';
+    categorias.forEach((c, i) => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.style.setProperty('--chip-c', CHIP_COLORS[i % CHIP_COLORS.length]);
+      chip.textContent = c.nome;
+      chip.onclick = () => aplicar({categoria_id: c.id});
+      chipsEl.appendChild(chip);
+    });
+    const novaChip = document.createElement('button');
+    novaChip.className = 'chip nova';
+    novaChip.textContent = '+ Nova categoria';
+    novaChip.onclick = () => chipNovaInput.classList.toggle('open');
+    chipsEl.appendChild(novaChip);
+  }
+
+  chipNovaNome.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('chipNovaConfirmar').click(); });
+  document.getElementById('chipNovaConfirmar').addEventListener('click', () => {
+    const nome = chipNovaNome.value.trim();
+    if (!nome) return;
+    aplicar({categoria_id: '__nova__', categoria_nova: nome}, nome);
+  });
+
+  function cardHTML(item, cls) {
+    const tipo = item.tipo_lancamento;
+    const sugestaoNome = item.sugestao_id ? (categorias.find(c => c.id === item.sugestao_id) || {}).nome : null;
+    return `
+      <div class="card ${cls}" data-id="${item.id}">
+        <span class="swipe-tag ok">Ok</span>
+        <span class="swipe-tag skip">Pular</span>
+        <div class="card-tipo ${tipo}">${tipo === 'receita' ? 'Receita' : 'Despesa'}</div>
+        <div class="card-desc">${item.descricao}</div>
+        <div class="card-valor ${tipo}">${formatBRL(item.valor)}</div>
+        <div class="card-data">${item.data_lancamento}</div>
+        ${sugestaoNome
+          ? `<div class="card-sugestao"><span class="dot"></span>Sugestão: ${sugestaoNome}</div>`
+          : `<div class="card-sem-sugestao">Sem sugestão — escolha uma categoria abaixo</div>`}
+      </div>`;
+  }
+
+  function render() {
+    if (!fila.length) {
+      stage.style.display = 'none';
+      actions.style.display = 'none';
+      chipsWrap.style.display = 'none';
+      emptyState.classList.add('show');
+      navCount.textContent = '';
+      progressFill.style.width = '100%';
+      return;
+    }
+    const done = total - fila.length;
+    navCount.innerHTML = `<b>${done + 1}</b> de ${total}`;
+    progressFill.style.width = (done / total * 100) + '%';
+
+    let html = '';
+    if (fila[2]) html += cardHTML(fila[2], 'ghost-2');
+    if (fila[1]) html += cardHTML(fila[1], 'ghost-1');
+    html += cardHTML(fila[0], 'top');
+    deck.innerHTML = html;
+
+    btnOk.disabled = !fila[0].sugestao_id;
+    attachDrag(deck.querySelector('.card.top'));
+  }
+
+  function removerDoTopo(direcao) {
+    const card = deck.querySelector('.card.top');
+    if (card) {
+      card.style.transition = 'transform .32s ease, opacity .32s ease';
+      card.style.transform = '';       // limpa o transform inline do arrasto pra classe de saída valer
+      card.classList.add(direcao === 'right' ? 'exit-right' : 'exit-left');
+    }
+    fila.shift();
+    setTimeout(render, direcao ? 220 : 0);
+  }
+
+  function recentralizarTopo() {
+    const card = deck.querySelector('.card.top');
+    if (!card) return;
+    card.style.transition = 'transform .28s cubic-bezier(.16,1,.3,1)';
+    card.style.transform = 'translate(0,0) rotate(0)';
+    const okTag = card.querySelector('.swipe-tag.ok');
+    const skipTag = card.querySelector('.swipe-tag.skip');
+    if (okTag) okTag.style.opacity = 0;
+    if (skipTag) skipTag.style.opacity = 0;
+  }
+
+  function mostrarErro(msg) {
+    const toast = document.getElementById('errToast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  function aplicar(payload, novoNomeParaLista) {
+    const item = fila[0];
+    if (!item) return;
+    fetch('/categorizar/aplicar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({lancamento_id: item.id, ...payload}),
+    })
+      .then(r => r.json().then(data => ({status: r.status, data})))
+      .then(({status, data}) => {
+        if (status !== 200 || !data.ok) {
+          mostrarErro('Não consegui salvar, tenta de novo.');
+          recentralizarTopo();
+          return;
+        }
+        if (novoNomeParaLista && !categorias.some(c => c.id === data.categoria_id)) {
+          categorias.push({id: data.categoria_id, nome: data.categoria_nome});
+          categorias.sort((a, b) => a.nome.localeCompare(b.nome));
+          renderChips();
+        }
+        chipNovaInput.classList.remove('open');
+        chipNovaNome.value = '';
+        removerDoTopo('right');
+      })
+      .catch(() => { mostrarErro('Sem conexão — tenta de novo.'); recentralizarTopo(); });
+  }
+
+  function confirmarSugestao() {
+    const item = fila[0];
+    if (!item || !item.sugestao_id) return;
+    aplicar({categoria_id: item.sugestao_id});
+  }
+
+  function pular() {
+    removerDoTopo('left');
+  }
+
+  btnSkip.addEventListener('click', pular);
+  btnOk.addEventListener('click', confirmarSugestao);
+
+  function attachDrag(card) {
+    if (!card) return;
+    let startX = 0, startY = 0, dx = 0, dragging = false;
+    const okTag   = card.querySelector('.swipe-tag.ok');
+    const skipTag = card.querySelector('.swipe-tag.skip');
+
+    function onDown(e) {
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      card.style.transition = 'none';
+      card.setPointerCapture(e.pointerId);
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      dx = e.clientX - startX;
+      const dy = (e.clientY - startY) * 0.3;
+      const rot = dx / 18;
+      card.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
+      const p = Math.min(Math.abs(dx) / 120, 1);
+      if (dx > 0) { okTag.style.opacity = p; skipTag.style.opacity = 0; }
+      else        { skipTag.style.opacity = p; okTag.style.opacity = 0; }
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      card.style.transition = 'transform .28s cubic-bezier(.16,1,.3,1)';
+      if (dx > 110 && card.parentElement && fila[0] && fila[0].sugestao_id) {
+        confirmarSugestao();
+      } else if (dx < -110) {
+        pular();
+      } else {
+        card.style.transform = 'translate(0,0) rotate(0)';
+        okTag.style.opacity = 0; skipTag.style.opacity = 0;
+      }
+      dx = 0;
+    }
+    card.addEventListener('pointerdown', onDown);
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerup', onUp);
+    card.addEventListener('pointercancel', onUp);
+  }
+
+  renderChips();
+  render();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}');
+  }
+</script>
+
+</body>
+</html>

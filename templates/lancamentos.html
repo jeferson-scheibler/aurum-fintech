@@ -131,6 +131,19 @@
     .hero.pos .hero-saldo { color: var(--brand); }
     .hero.neg .hero-saldo { color: var(--red); }
     .hero-split { display: flex; gap: 10px; }
+
+    /* ── banner categorizar ── */
+    .cat-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--surface); border: 1px solid var(--brand-dim);
+      padding: 13px 16px; margin-bottom: 14px; text-decoration: none;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: border-color .2s;
+    }
+    .cat-banner:hover { border-color: var(--brand); }
+    .cat-banner .txt { font-size: 12px; color: var(--text); }
+    .cat-banner .txt b { color: var(--brand); }
+    .cat-banner .arrow { color: var(--brand); font-size: 16px; flex: none; }
     .hero-chip {
       flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
       background: var(--bg); border: 1px solid var(--border); padding: 10px 12px;
@@ -349,6 +362,13 @@
       </div>
     </div>
   </div>
+
+  {% if pendentes_count %}
+  <a href="/categorizar" class="cat-banner">
+    <span class="txt"><b>{{ pendentes_count }}</b> lançamento{{ 's' if pendentes_count != 1 else '' }} sem categoria &middot; categorizar agora</span>
+    <span class="arrow">→</span>
+  </a>
+  {% endif %}
 
   <!-- TOOLBAR -->
   {% set adv = (1 if filtro_tipo else 0) + (1 if filtro_situacao else 0) + (1 if filtro_data_ini else 0) + (1 if filtro_data_fim else 0) %}
